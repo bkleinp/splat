@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "develop", "--prefix", "engine/supersplat-viewer"],
       "port": 3000
+    },
+    {
+      "name": "tours",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "web"],
+      "port": 5173
     }
   ]
 }
