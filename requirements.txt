@@ -1,0 +1,2 @@
+# Python deps for helper scripts (splat processing, data tools, etc.).
+# Install into the venv: .\.venv\Scripts\python.exe -m pip install -r requirements.txt
