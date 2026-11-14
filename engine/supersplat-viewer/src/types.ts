@@ -7,9 +7,9 @@ import type { Entity, EventHandler, AppBase } from 'playcanvas';
 
 import type { CaptureResult } from './capture';
 import type { Localize } from './localization';
-import type { ViewerAssets, ViewerFlags } from './options';
+import type { ViewerAssets, ViewerFlags, WalkSettings } from './options';
 import type { Quality } from './quality';
-import type { Annotation, ExperienceSettings } from './settings';
+import type { Annotation, ExperienceSettings, PostEffectSettings } from './settings';
 
 type CameraMode = 'orbit' | 'anim' | 'fly' | 'walk';
 
@@ -218,6 +218,18 @@ type ViewerHandle = {
      * axes. Independent of `gamingControls`, `inputMode` and the keyboard/gamepad input gate.
      */
     setMoveInput(x: number, z: number): void;
+    /** Tour fork: the current walking feel. */
+    getWalkSettings(): WalkSettings;
+    /**
+     * Tour fork: change how walking feels, immediately (also mid-walk, and before loading
+     * finishes). Unset fields keep their current value; out-of-range values are clamped.
+     */
+    setWalkSettings(settings: Partial<WalkSettings>): void;
+    /**
+     * Tour fork: replace the post effects (sharpness, bloom, grading, vignette, fringing) and
+     * re-render. Turning every effect off removes the post-processing pass entirely.
+     */
+    setPostEffects(postEffects: PostEffectSettings): void;
     /**
      * Request fullscreen for this viewer's root. Call from a user gesture; rejects on browser
      * refusal or destruction. Available before scene loading finishes. Without native support,

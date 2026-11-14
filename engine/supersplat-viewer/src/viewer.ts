@@ -26,6 +26,7 @@ import type { CameraComponent, Entity, GraphicsDevice, GSplatComponent, Layer } 
 
 import { CameraManager, isWalkAllowed } from './camera-manager';
 import type { Camera } from './cameras/camera';
+import { DEFAULT_WALK_SETTINGS } from './cameras/tour-walk-controller';
 import { Capture } from './capture';
 import type { CaptureResult } from './capture';
 import type { Collision } from './collision';
@@ -38,6 +39,7 @@ import type { GsafPlayer } from './gsaf/gsaf-player';
 import { InputController } from './input-controller';
 import { MeshDebugOverlay } from './mesh-debug-overlay';
 import { NavCursor } from './nav-cursor';
+import type { WalkSettings } from './options';
 import { Picker } from './picker';
 import type { ScenePicker } from './picker';
 import { FrameDepthPicker } from './picker-frame-depth';
@@ -255,6 +257,7 @@ class Viewer {
         sequenceLoad: Promise<GsafPlayer> | null = null
     ) {
         this.global = global;
+        this.walkSettings = { ...DEFAULT_WALK_SETTINGS, ...global.config.walk };
 
         const { app, settings, config, events, state, camera, renderer } = global;
         const { graphicsDevice } = app;
@@ -617,6 +620,7 @@ class Viewer {
             this.inputController = new InputController(global, this.picker);
 
             this.cameraManager = new CameraManager(global, sceneBound, null, !sequence);
+            this.cameraManager.setWalkSettings(this.walkSettings);
             applyCamera(this.cameraManager.camera);
 
             this.xr.setGrabTarget(results[0], !this.cameraManager.isObjectExperience);
@@ -874,6 +878,27 @@ class Viewer {
             throw new Error('setMoveInput: axes must be finite numbers');
         }
         this.inputController.setMoveInput(Math.max(-1, Math.min(1, x)), Math.max(-1, Math.min(1, z)));
+    }
+
+    // tour fork: walking feel, kept here so changes made before the scene loads still apply
+    private walkSettings: WalkSettings;
+
+    getWalkSettings(): WalkSettings {
+        return { ...this.walkSettings };
+    }
+
+    setWalkSettings(settings: Partial<WalkSettings>): void {
+        this.requireAlive('setWalkSettings');
+        this.walkSettings = { ...this.walkSettings, ...settings };
+        this.cameraManager?.setWalkSettings(this.walkSettings);
+    }
+
+    // tour fork: change sharpness, color grading, vignette etc. live
+    setPostEffects(postEffects: PostEffectSettings): void {
+        this.requireAlive('setPostEffects');
+        this.global.settings.postEffectSettings = structuredClone(postEffects);
+        this.configureCamera(this.global.settings);
+        this.global.app.renderNextFrame = true;
     }
 
     async requestFullscreen(): Promise<void> {

@@ -10,10 +10,11 @@ import { FlyController } from './cameras/fly-controller';
 import { FlySource } from './cameras/fly-source';
 import { OrbitController } from './cameras/orbit-controller';
 import type { TargetSource } from './cameras/target-navigation';
-import { WalkController } from './cameras/walk-controller';
+import { TourWalkController } from './cameras/tour-walk-controller';
 import { WalkSource } from './cameras/walk-source';
 import type { Collision } from './collision';
 import { easeOut } from './core/math';
+import type { WalkSettings } from './options';
 import { DEFAULT_CAMERA_FOV } from './schemas/defaults';
 import type { Annotation } from './settings';
 import type { CameraMode, Global } from './types';
@@ -96,6 +97,9 @@ class CameraManager {
     // there is none. The annotations time their tooltip to the camera's arrival with it.
     transitionProgress: () => number;
 
+    // Tour fork: change how walking feels, immediately.
+    setWalkSettings: (settings: Partial<WalkSettings>) => void;
+
     // Attach (or clear) collision after construction. The viewer reveals the scene without
     // waiting for collision data, which can be larger than the splats themselves, so this
     // arrives late. It re-tests whether walk mode is allowed, which gates the walk toggle
@@ -118,6 +122,10 @@ class CameraManager {
      */
     constructor(global: Global, bbox: BoundingBox, collision: Collision | null = null, cameraAnimation = true) {
         const { events, settings, state } = global;
+
+        // tour fork: walk is the only camera mode (no fly, orbit or intro animation)
+        const walkOnly = global.config.walkOnly;
+        if (walkOnly) cameraAnimation = false;
 
         let walkAllowed = isWalkAllowed(bbox, collision);
 
@@ -153,7 +161,7 @@ class CameraManager {
         const controllers = {
             orbit: new OrbitController(),
             fly: new FlyController(),
-            walk: new WalkController(),
+            walk: new TourWalkController(),
             anim: animTrack ? new AnimController(animTrack) : null
         };
 
@@ -183,7 +191,17 @@ class CameraManager {
         }
 
         // initialize camera mode and initial camera position
-        state.cameraMode = controllers.anim ? 'anim' : isObjectExperience ? 'orbit' : walkAllowed ? 'walk' : 'fly';
+        // walk-only enters walk even before collision arrives: WalkController stands on the entry
+        // level until it does
+        state.cameraMode = walkOnly
+            ? 'walk'
+            : controllers.anim
+              ? 'anim'
+              : isObjectExperience
+                ? 'orbit'
+                : walkAllowed
+                  ? 'walk'
+                  : 'fly';
         this.camera.copy(resetCamera);
 
         const target = new Camera(this.camera); // the active controller updates this
@@ -229,6 +247,19 @@ class CameraManager {
             controllers.fly.collision = value;
             controllers.walk.collision = value;
             walkAllowed = isWalkAllowed(bbox, value);
+
+            // walk-only entered walk before collision arrived, on the starting camera's level,
+            // which may sit inside the real floor where collision can never engage. Re-enter now
+            // so the camera stands on the floor, easing there rather than popping
+            if (walkOnly && value && state.cameraMode === 'walk') {
+                startTransition(0.5);
+                controllers.walk.onEnter(this.camera);
+            }
+        };
+
+        this.setWalkSettings = (value: Partial<WalkSettings>) => {
+            controllers.walk.applySettings(value);
+            global.app.renderNextFrame = true;
         };
 
         this.snap = () => {
@@ -359,6 +390,14 @@ class CameraManager {
 
         // handle camera mode switching
         events.on('cameraMode:changed', (value: CameraMode, prev: CameraMode) => {
+            // walk-only: undo any switch away from walk (shortcuts, picking, framing). The undo
+            // fires this handler again with walk as the value; walk was never left, so there is
+            // nothing to exit or enter
+            if (walkOnly) {
+                if (value !== 'walk') state.cameraMode = 'walk';
+                return;
+            }
+
             // no animation to enter: a host's write is undone, and the undo has nothing to exit
             if (!getController(value)) {
                 state.cameraMode = prev;

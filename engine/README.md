@@ -36,9 +36,17 @@ Opening http://localhost:3000 on its own shows a **blank page**: the viewer look
 engine/scripts/fetch-sample.sh
 ```
 
-Then open **http://localhost:3000/apartment** (it forwards to the viewer with the sample's URL
-parameters) and press `3` for walk mode (WASD to move). Samples land in `public/`, which is
-gitignored.
+Then open **http://localhost:3000/apartment** or **/seven-park** (stock viewer in our walk-only
+mode, no buttons) or **/apartment-hosted** (stock viewer, unchanged, for comparison). Samples land
+in `public/`, which is gitignored. The product tours themselves run in the web app (`web/`).
+
+### Our changes to the viewer
+
+| Change | Where |
+| --- | --- |
+| Human walking pace with eased start/stop, no jumping, subtle head bob (off under OS reduced motion), all tunable as `WalkSettings` | `src/cameras/tour-walk-controller.ts` (new), used by `src/camera-manager.ts` |
+| `walkOnly` option (`?walkonly`): starts in walk, no intro animation, no switching to fly/orbit, settles onto the floor once collision loads | `src/options.ts`, `src/index.ts`, `src/index.html`, `src/camera-manager.ts` |
+| `walk` option, and `getWalkSettings` / `setWalkSettings` / `setPostEffects` on the viewer handle; `DEFAULT_WALK_SETTINGS` export | `src/options.ts`, `src/types.ts`, `src/viewer.ts`, `src/index.ts` |
 
 ### Pulling upstream updates
 

@@ -26,7 +26,7 @@ cat > "$DEST/../../apartment.html" <<'HTML'
 <meta charset="utf-8">
 <title>Apartment sample</title>
 <script>
-location.replace('/?content=./samples/apartment/apartment.sog&settings=./samples/apartment/settings.json&collision=./samples/apartment/apartment.voxel.json');
+location.replace('/?content=./samples/apartment/apartment.sog&settings=./samples/apartment/settings.json&collision=./samples/apartment/apartment.voxel.json&walkonly&noui');
 </script>
 HTML
 
@@ -61,7 +61,7 @@ cat > "$DEST/../../seven-park.html" <<'HTML'
 <meta charset="utf-8">
 <title>Seven Park unit</title>
 <script>
-location.replace('/?content=https://d28zzqy0iyovbz.cloudfront.net/b185fd52/v1/meta.json&settings=./samples/seven-park/settings.json&collision=https://d28zzqy0iyovbz.cloudfront.net/b185fd52/v1/scene.voxel.json&aa=false');
+location.replace('/?content=https://d28zzqy0iyovbz.cloudfront.net/b185fd52/v1/meta.json&settings=./samples/seven-park/settings.json&collision=https://d28zzqy0iyovbz.cloudfront.net/b185fd52/v1/scene.voxel.json&aa=false&walkonly&noui');
 </script>
 HTML
 
