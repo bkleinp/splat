@@ -9,7 +9,10 @@ export default function HomePage() {
       <div className="house-grid">
         {houses.map((house, i) => (
           <Link key={house.id} href={`/house/${house.slug}`} className="house-card">
-            <span className="eyebrow">House {i + 1}</span>
+            <span className="eyebrow">
+              House {i + 1}
+              {house.scene && " · 3D tour"}
+            </span>
             <h2>{house.title}</h2>
             <p className="muted">
               {house.address}, {house.city}, {house.region}

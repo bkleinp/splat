@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
+    "@playcanvas/supersplat-viewer": "link:..\\..\\engine\\supersplat-viewer",
     "@splat/llm": "workspace:^",
     "next": "15",
+    "playcanvas": "2.24.1",
     "react": "19",
     "react-dom": "19"
   },

@@ -20,12 +20,18 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^1.8.0
         version: 1.8.0
+      '@playcanvas/supersplat-viewer':
+        specifier: link:..\..\engine\supersplat-viewer
+        version: link:../../engine/supersplat-viewer
       '@splat/llm':
         specifier: workspace:^
         version: link:../../llm
       next:
         specifier: '15'
         version: 15.5.29(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      playcanvas:
+        specifier: 2.24.1
+        version: 2.24.1
       react:
         specifier: '19'
         version: 19.3.1
@@ -325,6 +331,12 @@ packages:
   '@types/react@19.3.0':
     resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
 
+  '@types/webxr@0.5.24':
+    resolution: {integrity: sha512-h8fgEd/DpoS9CBrjEQXR+dIDraopAEfu4wYVNY2tEPwk60stPWhvZMf4Foo5FakuQ7HFZoa8WceaWFervK2Ovg==}
+
+  '@webgpu/types@0.1.74':
+    resolution: {integrity: sha512-lgiI4hbuLcI9unnm2cL/tvCaQU45dp0xcLWJh5uB/9MBGvIA4F8XIk7nSiBeg+K4xWGYwgZKn80LmERI5CxoTA==}
+
   caniuse-lite@1.0.30001826:
     resolution: {integrity: sha512-wTB+9tIbLro/BCXwLuNV1meHE4L9dS6dArMDwgYfNBPMYScqClHyGunhkCSDtHhe/69Xl0sHlKgBVZ+fNsYtWA==}
 
@@ -373,6 +385,10 @@ packages:
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
+
+  playcanvas@2.24.1:
+    resolution: {integrity: sha512-tWZDt1evgPdS9tTjqOTH+YP6UY78KcXzpnhGAapsiCXpT8uciw/+ogZLcSt3xLjcbSvZmniTStQldZhkylsoXA==}
+    engines: {node: '>=18.3.0'}
 
   postcss@8.4.31:
     resolution: {integrity: sha512-PS08Iboia9mts/2ygV3eLpY5ghnUcfLV/EXTOW1E2qYxJKGGBUtNjN76FYHnMs36RmARn41bC0AZmn+rR0OVpQ==}
@@ -628,6 +644,10 @@ snapshots:
     dependencies:
       csstype: 3.2.3
 
+  '@types/webxr@0.5.24': {}
+
+  '@webgpu/types@0.1.74': {}
+
   caniuse-lite@1.0.30001826: {}
 
   client-only@0.0.1: {}
@@ -672,6 +692,11 @@ snapshots:
       - babel-plugin-macros
 
   picocolors@1.1.1: {}
+
+  playcanvas@2.24.1:
+    dependencies:
+      '@types/webxr': 0.5.24
+      '@webgpu/types': 0.1.74
 
   postcss@8.4.31:
     dependencies:

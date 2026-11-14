@@ -65,6 +65,19 @@ export type HouseView = {
   visibleZoneIds: string[];
 };
 
+/** A 3D Gaussian-splat tour, rendered by the viewer in engine/supersplat-viewer. */
+export type HouseScene = {
+  /** Splat content: a .sog / .ply file, or a streamed meta.json. */
+  contentUrl: string;
+  /** Viewer experience settings (camera start, background, post effects). */
+  settingsUrl: string;
+  /** Voxel collision for walk mode. */
+  collisionUrl?: string;
+  /** Anti-aliasing compensation override; match what the scene was trained with. */
+  aa?: boolean;
+  credit: string;
+};
+
 export type House = {
   id: string;
   slug: string;
@@ -74,7 +87,9 @@ export type House = {
   region: string;
   summary: string;
   zones: Zone[];
-  /** Slideshow order; the first view is where a visit starts. */
+  /** When set, the house page shows this 3D tour instead of the photo slideshow. */
+  scene?: HouseScene;
+  /** Slideshow order; the first view is where a visit starts. Empty for scene-only houses. */
   views: HouseView[];
   facts: ListingFact[];
   documents: SourceDocument[];

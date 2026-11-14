@@ -1,167 +1,112 @@
 # LLM Layer
 
-How the listing chat works: where house context lives, how the visitor's location is worked out, and how both reach Claude.
+How the listing chat works: where house context lives, how it reaches Claude, and how location awareness fits in.
 
-**Spatial context today:** the 3D engine isn't ready, so each house has a photo slideshow. The photo the visitor is looking at stands in for the camera position. The app works out which zone (room or feature) that photo shows, and the chat uses it to answer "this room" questions. When the engine lands, only the "camera → zone" step changes (see [Swapping in the 3D engine](#swapping-in-the-3d-engine)).
+**Current state:** one house, the Seven Park unit (`house-3`), shown as a **full-screen 3D tour** with the chat floating over it. The tour is **walk-only**. The chat answers from the house's context but is **not location-aware yet**: no location is sent, so every question resolves to "location unknown" and the model answers about the whole home. The location pipeline (zones, resolution, ranking, prompt rules) is built and waiting for the camera pose (see [Adding location to the 3D tour](#adding-location-to-the-3d-tour)).
+
+> Earlier versions had two photo-slideshow houses where the current photo stood in for the camera position. They were removed in the UI revamp; git history has them if you need them.
 
 ## Where things live
 
 | File | What it does |
 |---|---|
-| `llm/src/houses.ts` | **All house data.** Per house: `zones` (named areas), `views` (slideshow photos, each mapped to a zone), `facts`, and `documents` whose sections are tagged with zone IDs. |
-| `llm/src/types.ts` | `House`, `Zone`, `HouseView`, `ListingFact`, `SourceDocument`, `DocumentSection`, mirroring the blueprint's tables. |
-| `llm/src/spatial.ts` | **Spatial resolution.** `resolveView()` turns a view into a `ResolvedLocation`; `zoneRelevance()` scores zones for ranking evidence. |
+| `llm/src/houses.ts` | **All house data.** `zones` (named areas), `scene` (3D tour URLs and credit), `facts`, and `documents` whose sections are tagged with zone IDs. |
+| `llm/src/types.ts` | `House`, `HouseScene`, `Zone`, `HouseView`, `ListingFact`, `SourceDocument`, `DocumentSection`, mirroring the blueprint's tables. |
+| `llm/src/spatial.ts` | **Spatial resolution.** `resolveView()` turns a view into a `ResolvedLocation`; `zoneRelevance()` scores zones for ranking evidence. `resolvePose()` goes here next. |
 | `llm/src/context.ts` | `SYSTEM_PROMPT` (voice, location rules, ground rules), `buildHouseContext()` (evidence ranked by location), `formatLocation()` (the per-message location block), `sourceLabels()`. |
 | `llm/src/claude.ts` | `streamChatAboutHouse()`: resolves location, builds the prompt, streams from `claude-haiku-5-5`. |
 | `apps/web/src/app/api/chat/route.ts` | `POST /api/chat`: validates the request and streams NDJSON back. |
-| `apps/web/src/app/house/[slug]/page.tsx` | House page (server). Passes only photos, title and source labels to the client. Facts, documents and zones never reach the browser. |
-| `apps/web/src/app/house/[slug]/HouseExperience.tsx` | Holds the current slide, shared by the gallery and the chat. |
-| `apps/web/src/app/house/[slug]/Gallery.tsx` | Photo slideshow: arrows, thumbnails, ←/→ keys. Stand-in for the 3D viewer. |
-| `apps/web/src/app/house/[slug]/Chat.tsx` | Chat panel. Sends the current view with each question, shows "Viewing: …", renders citations as chips. |
-| `apps/web/public/houses/` | Photos. House 1 has five, in `house-1/`. |
+| `apps/web/src/app/house/[slug]/page.tsx` | House page (server). Passes only the scene, title and source labels to the client; facts and documents never reach the browser. |
+| `apps/web/src/app/house/[slug]/HouseExperience.tsx` | Full-screen layout: the tour, the title overlay, and the floating chat (hideable; the conversation is kept while hidden). Pauses the viewer's keyboard input while the chat box has focus. |
+| `apps/web/src/app/house/[slug]/SplatViewer.tsx` | Embeds `engine/supersplat-viewer` with `createViewer({ ui: false })`. Loading bar, walk-only enforcement, Reset position, hint and credit. Destroys the viewer on unmount. |
+| `apps/web/src/app/house/[slug]/Chat.tsx` | Chat panel. Streams answers and renders citations as chips. Still supports a `currentView` for location-aware tours. |
+| `apps/web/public/scenes/` | Viewer settings per scene (camera start, background). The scene content streams from its host. |
+
+## The 3D tour
+
+- **Viewer:** your friend's fork of PlayCanvas's SuperSplat viewer, in `engine/supersplat-viewer`. It's built with `pnpm viewer:build` and linked into `apps/web` as `@playcanvas/supersplat-viewer`. Its built-in UI is off, so the product's own controls are in `SplatViewer.tsx`.
+- **Walk-only:** once the scene is loaded and walking is allowed (that needs the collision data), the viewer is put in walk mode. If anything switches it away (the viewer's `1`/`2`/`3`/`Esc` shortcuts, say), it's put straight back. Visitors click or tap a spot to walk there, drag to look, and use WASD to move. Reset position returns to where walking started.
+- **Typing in the chat:** the viewer listens for keys on the whole page, so `state.inputEnabled` is switched off while the chat box has focus.
+- **Seven Park scene:** streamed from superspl.at's CDN, as in `engine/scripts/fetch-sample.sh`. It's copyrighted, so it's never copied into the repo, and the demo depends on that CDN being up.
 
 ## Request flow
 
 ```mermaid
 sequenceDiagram
-  participant G as Gallery (current slide)
   participant B as Chat.tsx
   participant R as /api/chat
   participant S as spatial.ts
   participant C as Claude Haiku 5.5
 
-  G->>B: currentView = "kitchen"
-  B->>R: POST { houseSlug, messages: [{ role, content, viewId }] }
-  R->>S: resolveView(house, "kitchen")
-  S-->>R: Kitchen < Main floor | in view: Kitchen island, Range, Dining area, Back patio
-  R-->>B: { type: "location" }  (shown under the question)
-  R->>C: system prompt + evidence ranked for Kitchen + <visitor_location> on the question
+  B->>R: POST { houseSlug, messages: [{ role, content, viewId? }] }
+  R->>S: resolve location of the latest question
+  S-->>R: ResolvedLocation (today: "unknown" on the 3D tour)
+  R-->>B: { type: "location" }
+  R->>C: system prompt + evidence ranked for that location + <visitor_location> on the question
   C-->>B: streamed text, then { type: "done" }
 ```
 
-1. The visitor picks a slide. `HouseExperience` gives its `id` to the chat.
-2. Each question is sent with the `viewId` it was asked from. Earlier turns keep their own `viewId`.
-3. The server resolves the **latest** question's view to a location: the zone they're in, its parent zones, and the zones in view.
-4. The evidence is re-ranked for that location and the location is attached to the question (details below).
-5. The answer streams back. The first event tells the chat panel where the server placed the question, which it shows as "in Kitchen" under the question.
+## Spatial context (built, waiting for the camera)
 
-## Spatial context
+### Zones
 
-### Zones and views
-
-Zones follow the blueprint's `spatial_zones`, minus the bounding boxes for now. Each has an `id`, `name`, `kind` (`room`, `feature`, `appliance`, `floor`, `outdoor_area`), an optional `parentId`, and `aliases`. House 1:
-
-```text
-Whole property
-├─ Exterior & garage             ← "Exterior" slide
-├─ Back patio
-├─ Main floor
-│  ├─ Kitchen                    ← "Kitchen" slide (in view: island, range, dining, patio)
-│  │  ├─ Kitchen island
-│  │  └─ Range
-│  ├─ Dining area
-│  └─ Living room                ← "Living room" slide
-└─ Upper floor
-   ├─ Primary bedroom            ← "Primary bedroom" slide (in view: primary bathroom)
-   ├─ Primary bathroom
-   ├─ Hall bathroom              ← "Hall bathroom" slide (in view: second bedroom)
-   └─ Second bedroom
-```
-
-Each **view** (slide) has a `zoneId` (where the visitor is) and `visibleZoneIds` (what else is clearly in the photo). Document sections list the zones they're about in `zones`. An empty list means the section covers the whole home, like the HOA rules or the neighborhood guide.
+Zones follow the blueprint's `spatial_zones`, minus the bounding boxes for now. Each has an `id`, `name`, `kind` (`room`, `feature`, `appliance`, `floor`, `outdoor_area`), an optional `parentId`, and `aliases`. House 3 has a living room, balcony, kitchen, primary bedroom and primary bathroom. Document sections list the zones they're about in `zones`; an empty list means the whole home.
 
 ### Resolution (`spatial.ts`)
 
-`resolveView(house, viewId)` returns the blueprint's `ResolvedLocation`:
+Location is worked out in code, never by the model, and returned as the blueprint's `ResolvedLocation`:
 
 ```ts
 {
   primaryZone: { id: "kitchen", name: "Kitchen", kind: "room" },
-  ancestorZones: [{ name: "Main floor" }],                       // innermost first
-  nearbyZones: [{ name: "Kitchen island" }, { name: "Range" }, ...],
-  confidence: 1,                                                 // views are hand-authored
-  resolution: "inside-zone"                                      // or "unknown"
+  ancestorZones: [...],     // containing zones, innermost first
+  nearbyZones: [...],       // zones in view
+  confidence: 1,
+  resolution: "inside-zone" // or "unknown"
 }
 ```
 
-This is plain code, not the model, so it's deterministic and testable. An unknown or missing `viewId` returns `resolution: "unknown"`, and the model then asks which room the visitor means rather than guessing.
-
 ### Ranking evidence
 
-`buildHouseContext(house, location)` builds the `<evidence>` block:
+`buildHouseContext(house, location)` builds `<evidence>`:
 
-1. **Listing facts:** always included, whatever the location. Structured facts beat document text.
-2. **"Where the visitor is now":** document sections tagged with a relevant zone, best first. `zoneRelevance()` scores each zone:
-   - **1.0** for the zone they're in, or anything inside it. In the Kitchen, that includes the island and range.
-   - **0.7** for zones in view from there.
-   - **0.3** for containing zones, like Main floor.
-3. **"Elsewhere in the home":** everything else, so general questions still work from any room.
-
-Every section is still sent, because the data is small; location only decides order and grouping. With many documents this becomes real retrieval with the same zone scoring (blueprint § "Retrieval ranking").
+1. **Whole-home facts:** always included.
+2. **"Where the visitor is now":** document sections for the current zone, best first. `zoneRelevance()` scores 1.0 for the zone itself or anything inside it, 0.7 for zones in view, and 0.3 for containing zones.
+3. **"Elsewhere in the home":** everything else.
 
 ### What the model sees
 
-The latest question starts with a location block (blueprint § "Example answer context"):
+Each question starts with a location block (blueprint § "Example answer context"):
 
 ```text
 <visitor_location>
 Currently viewing: Kitchen (room)
-Within: Main floor
-Also in view: Kitchen island, Range, Dining area, Back patio
+Also in view: Kitchen island
 Location confidence: high
 </visitor_location>
-
-What are these counters made of?
 ```
 
-Earlier questions get a short version, `<visitor_location>Was viewing: Living room</visitor_location>`, so the model knows where "here" pointed back then.
-
-The **location rules** in `SYSTEM_PROMPT` (from the blueprint's system-instruction requirements):
-- Use the location only to interpret "here", "this room", "these counters" and "that appliance". It isn't a fact about the home.
-- Answer "this room" questions from the "Where the visitor is now" evidence. If that evidence doesn't cover it, say so rather than borrowing from another room.
-- Questions about other rooms or the whole home are answered normally, without implying the visitor is somewhere they're not.
-- Always go by the latest message's location.
-- If the location is unknown, ask which area.
-- It can't see the photos, so it never describes what's in a picture beyond the evidence.
-
-### Tested behavior
-
-| Asked from | Question | Result |
-|---|---|---|
-| Kitchen | "What are these counters made of?" | White quartz, kitchen and island. Cited. |
-| Primary bedroom | same | Took "these counters" as the in-view en-suite vanity; said its material isn't listed; mentioned the kitchen's quartz without implying the visitor is in the kitchen. |
-| Kitchen, then Primary bedroom | "What appliances are in here?", then "And what about in here?" | Switched to describing the bedroom. |
-| Unknown view | "Tell me about this room" | Asked which room the visitor means. |
-| Living room | "What's that painting on the wall?" | Said artwork isn't in the listing; suggested asking the agent. |
-| Exterior | "How many bedrooms?" | 3. A whole-home answer from any location. |
+With no location, it's `Unknown … answer about the whole home`. The prompt's location rules:
+- Use the location only to interpret "here" or "this room".
+- Answer "this room" questions from that area's evidence.
+- Go by the latest message's location.
+- When the location is unknown, answer about the whole home and only ask which area when a question needs it.
+- Never describe what's on screen.
 
 ## How context switching works
 
-Claude remembers nothing between requests. Every request carries exactly one house's evidence, ranked for that request's location.
-
-- **Changing houses:** the next request names a different `houseSlug`, so only that house's data is sent.
-- **Changing rooms:** the next question carries a different `viewId`, so the evidence is re-ranked and a new location block is attached.
+Claude remembers nothing between requests. Each request carries exactly one house's evidence, ranked for that request's location.
 - **History lives in the browser** (React state in `Chat.tsx`). The server is stateless.
-- **Each house starts a fresh chat** (`<HouseExperience key={house.slug}>`), and a page refresh clears it.
-- **The client can't inject context.** It sends a house name and a view ID; the server picks the evidence and works out the location. An unrecognized view ID just means "location unknown".
+- **The client can't inject context.** It sends a house name and, optionally, a view ID; the server picks the evidence and works out the location.
 - **Edits are live.** Changes to `houses.ts` apply to the next question.
 
 ## Citations and source chips
 
-The model ends each factual sentence with a source label in brackets, e.g. `The island seats four. [Realtor amenities form]`. `Chat.tsx` (`splitCitations`) removes those from the text and shows them as chips under the answer. Only this house's real labels count (`sourceLabels(house)`: fact sources plus document titles); other bracketed text is left alone. While streaming, a half-written `[Rea…` is hidden until it closes.
+The model ends each factual sentence with a source label in brackets, e.g. `The balcony faces the city. [Realtor amenities form]`. `Chat.tsx` (`splitCitations`) turns those into chips under the answer. Only this house's real labels count (`sourceLabels(house)`); other bracketed text is left alone.
 
 ## Streaming protocol
 
-`POST /api/chat`:
-
-```json
-{
-  "houseSlug": "house-1",
-  "messages": [{ "role": "user", "content": "What are these counters made of?", "viewId": "kitchen" }]
-}
-```
-
-Request errors (unknown house, bad body) return JSON with a 4xx status. Otherwise the response is `application/x-ndjson`, one JSON event per line:
+`POST /api/chat` with `{ houseSlug, messages: [{ role, content, viewId? }] }`. Request errors return JSON with a 4xx status. Otherwise the response is `application/x-ndjson`:
 
 | Event | Meaning |
 |---|---|
@@ -174,19 +119,15 @@ Request errors (unknown house, bad body) return JSON with a 4xx status. Otherwis
 ## Common changes
 
 - **Edit what the assistant knows:** `llm/src/houses.ts`.
-- **Add a slide:** put the image in `apps/web/public/houses/<house>/`, then add a `views` entry with its `zoneId` and `visibleZoneIds`. Add a zone first if the room is new.
-- **Tie a document section to a room:** list the zone IDs in that section's `zones`.
-- **Add a house:** add the object, with at least one view, to the `houses` array.
-- **Change the tone or rules:** `SYSTEM_PROMPT` in `llm/src/context.ts`. Keep the location and ground rules.
+- **Add a 3D house:** add a `House` with a `scene` (content, settings and collision URLs, credit) and put its settings JSON in `apps/web/public/scenes/<name>/`.
+- **Change the tone or rules:** `SYSTEM_PROMPT` in `llm/src/context.ts`.
 - **Change the model:** `CHAT_MODEL` in `llm/src/claude.ts`.
 
-## Swapping in the 3D engine
+## Adding location to the 3D tour
 
-Everything after "where is the visitor?" stays the same. To switch from slides to the 3D viewer:
+Everything after "where is the visitor?" already exists. To finish it:
 
-1. Give zones bounding boxes (`min_x … max_z`, in the viewer's world coordinates), as in the blueprint's `spatial_zones`.
-2. Have the viewer send `scene.pose.v1` (position and forward vector) instead of a `viewId`.
-3. Add `resolvePose(house, position)` in `spatial.ts`: find enabled zones whose box contains the point, prefer the smallest, fall back to nearby zones within about 1.5 m, otherwise `unknown`. It returns the same `ResolvedLocation`.
-4. Add hysteresis in the UI so the location label doesn't flicker at doorways.
-
-`buildHouseContext`, `formatLocation`, the prompt, the route and the chat panel all already work on a `ResolvedLocation`.
+1. **Read the camera pose.** In `SplatViewer`, `viewer.app.root.findByName('camera')` gives `getPosition()` and `forward`. Report it when movement settles (about 250 ms), at most once a second while moving, and just before each question (blueprint `scene.pose.v1`).
+2. **Give House 3's zones boxes** (`min`/`max` x, y, z in the viewer's world coordinates). Get them by walking the tour with a small on-screen position readout and noting each room's corners.
+3. **Add `resolvePose(house, position)`** in `spatial.ts`: take the smallest enabled box containing the point, fall back to nearby boxes within about 1.5 m, otherwise `unknown`. It returns the same `ResolvedLocation`.
+4. **Send the pose with each question** instead of a `viewId`, and show "Viewing: Living room" in the chat header. Add hysteresis so the label doesn't flicker at doorways.

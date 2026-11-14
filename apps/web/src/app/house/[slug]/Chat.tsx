@@ -17,9 +17,17 @@ type StreamEvent =
   | { type: "done" }
   | { type: "error"; error: string };
 
-const SUGGESTIONS = [
+const ROOM_SUGGESTIONS = [
   "Tell me about this room",
   "What's the flooring here?",
+  "What are the counters made of?",
+  "What's nearby?",
+];
+
+// For tours without location awareness yet, so "this room" can't be resolved.
+const GENERAL_SUGGESTIONS = [
+  "What are the highlights of this home?",
+  "How many bedrooms and bathrooms?",
   "What are the counters made of?",
   "What's nearby?",
 ];
@@ -75,12 +83,18 @@ export function Chat({
   houseTitle,
   sources,
   currentView,
+  onTyping,
+  onClose,
 }: {
   houseSlug: string;
   houseTitle: string;
   sources: string[];
-  /** The photo the visitor is looking at right now. */
-  currentView: { id: string; label: string };
+  /** The photo the visitor is looking at right now. Absent when location isn't tracked. */
+  currentView?: { id: string; label: string };
+  /** Fires when the question box gains/loses focus. */
+  onTyping?: (typing: boolean) => void;
+  /** When set, the header shows a button to hide the chat. */
+  onClose?: () => void;
 }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
@@ -96,7 +110,7 @@ export function Chat({
     const text = question.trim();
     if (!text || pending) return;
 
-    let asked: Turn = { role: "user", content: text, viewId: currentView.id, locationLabel: currentView.label };
+    let asked: Turn = { role: "user", content: text, viewId: currentView?.id, locationLabel: currentView?.label };
     const next: Turn[] = [...turns, asked];
     setTurns(next);
     setInput("");
@@ -125,8 +139,8 @@ export function Chat({
 
       await readEvents(res.body, (event) => {
         if (event.type === "location") {
-          // Show where the server actually placed the question.
-          asked = { ...asked, locationLabel: event.location.primaryZone?.name ?? "Unknown location" };
+          // Show where the server actually placed the question (only when we sent a view).
+          if (asked.viewId) asked = { ...asked, locationLabel: event.location.primaryZone?.name ?? "Unknown location" };
         } else if (event.type === "text") answer += event.text;
         else if (event.type === "replace") answer = event.text;
         else if (event.type === "error") throw new Error(event.error);
@@ -146,16 +160,27 @@ export function Chat({
   return (
     <aside className="chat">
       <header className="chat-header">
+        {onClose && (
+          <button type="button" className="chat-close" aria-label="Hide chat" onClick={onClose}>
+            ×
+          </button>
+        )}
         <strong>Ask about this home</strong>
         <span className="muted small">
-          {houseTitle} · <span className="chat-location">Viewing: {currentView.label}</span>
+          {houseTitle}
+          {currentView && (
+            <>
+              {" · "}
+              <span className="chat-location">Viewing: {currentView.label}</span>
+            </>
+          )}
         </span>
       </header>
 
       <div className="chat-log" ref={logRef}>
         {turns.length === 0 && (
           <div className="suggestions">
-            {SUGGESTIONS.map((s) => (
+            {(currentView ? ROOM_SUGGESTIONS : GENERAL_SUGGESTIONS).map((s) => (
               <button key={s} type="button" className="suggestion" onClick={() => send(s)} disabled={pending}>
                 {s}
               </button>
@@ -202,7 +227,9 @@ export function Chat({
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={`Ask about the ${currentView.label.toLowerCase()}…`}
+          onFocus={() => onTyping?.(true)}
+          onBlur={() => onTyping?.(false)}
+          placeholder={currentView ? `Ask about the ${currentView.label.toLowerCase()}…` : "Ask about this home…"}
           maxLength={2000}
           disabled={pending}
           aria-label="Your question"

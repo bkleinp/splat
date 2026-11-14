@@ -6,6 +6,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "viewer:build": "npm ci --prefix engine/supersplat-viewer && npm run build --prefix engine/supersplat-viewer",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
