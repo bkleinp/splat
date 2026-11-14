@@ -28,6 +28,18 @@ npm run develop   # dev server at http://localhost:3000
 npm test          # build + unit tests
 ```
 
+Opening http://localhost:3000 on its own shows a **blank page**: the viewer looks for
+`./scene.compressed.ply` and `./settings.json`, which don't exist. Fetch the sample apartment scan
+(CC-BY-4.0, by Stephane Agullo / sa3d.fr) into the dev server folder:
+
+```bash
+engine/scripts/fetch-sample.sh
+```
+
+Then open **http://localhost:3000/apartment** (it forwards to the viewer with the sample's URL
+parameters) and press `3` for walk mode (WASD to move). Samples land in `public/`, which is
+gitignored.
+
 ### Pulling upstream updates
 
 The `upstream-viewer` remote points at PlayCanvas's repo. To add it on a fresh clone:
