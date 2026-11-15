@@ -975,6 +975,10 @@ class Viewer {
         this.planView = on;
         this.cameraManager.setPlanView(on, this.planFloor, footprint);
         if (on) this.applyPlanCrop();
+        // the floor plan is looked at from above: the view out of the windows would only clutter
+        // the background around it
+        this.updateSkyLayer();
+        this.global.app.renderNextFrame = true;
         this.global.events.fire('planView:changed', on);
     }
 
@@ -1118,6 +1122,16 @@ class Viewer {
     // tour fork: show or hide the skybox (the view out of the windows); hidden shows the
     // settings' background colour
     private skyboxVisible = true;
+
+    // the sky would cover AR's passthrough view entirely, so it is hidden for the session; the
+    // tour fork also hides it on request (setSkyboxVisible) and in the floor plan, showing the
+    // background colour instead
+    private updateSkyLayer(): void {
+        const skyLayer = this.global.app.scene.layers.getLayerById(LAYERID_SKYBOX);
+        if (skyLayer) {
+            skyLayer.enabled = this.global.state.xrMode !== 'ar' && this.skyboxVisible && !this.planView;
+        }
+    }
 
     setSkyboxVisible(visible: boolean): void {
         this.requireAlive('setSkyboxVisible');
@@ -1453,10 +1467,7 @@ class Viewer {
             camera.camera.clearColor = state.xrMode === 'ar' ? new Color(0, 0, 0, 0) : new Color(background.color);
         }
 
-        // the sky would cover AR's passthrough view entirely, so it is hidden for the session; the
-        // tour fork can also hide it (setSkyboxVisible), showing the background colour instead
-        const skyLayer = app.scene.layers.getLayerById(LAYERID_SKYBOX);
-        if (skyLayer) skyLayer.enabled = state.xrMode !== 'ar' && this.skyboxVisible;
+        this.updateSkyLayer();
 
         // Mesh overlay bakes its vertex colors based on the current gamma
         // path; reapply when CameraFrame is created/destroyed (e.g. on XR

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ViewerHandle } from "@playcanvas/supersplat-viewer/viewer";
 import { readPose } from "@/components/tour/camera";
@@ -121,9 +120,6 @@ export function HouseExperience({
       />
 
       <header className="tour-header">
-        <Link href="/" className="tour-back">
-          ← All homes
-        </Link>
         <h1>{houseTitle}</h1>
       </header>
 

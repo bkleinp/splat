@@ -113,7 +113,6 @@ export function SplatViewer({
               ? "Drag to turn · Scroll to zoom"
               : "Click to walk · Drag to look · WASD to move"}
           </span>
-          {tour.credit && <span className="scene-credit">{tour.credit}</span>}
         </div>
       )}
     </section>
