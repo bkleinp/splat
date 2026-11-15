@@ -49,7 +49,9 @@ const house3: House = {
   zones: [
     { id: "property", name: "Whole property", kind: "property" },
 
-    // Rooms: where you stand. opensTo = rooms you can see into (open plan or a doorway).
+    // Rooms: where you stand. opensTo = rooms open plan with this one (no wall between;
+    // the balcony counts, through the glass). Rooms behind a door are seen from the
+    // doorway itself: standing in an entrance zone sees into the rooms on both sides.
     { id: "kitchen", name: "Kitchen", kind: "room", parentId: "property", boxes: [area(-5.6, -1.8, -3.9, -1.25)], opensTo: ["dining"] },
     {
       id: "dining",
@@ -67,7 +69,7 @@ const house3: House = {
       parentId: "property",
       aliases: ["living area", "lounge"],
       boxes: [area(-1.7, 1.25, 0, 3.85)],
-      opensTo: ["balcony", "primary-bedroom", "hallway"],
+      opensTo: ["balcony"],
     },
     {
       id: "hallway",
@@ -78,7 +80,6 @@ const house3: House = {
       // The hall between the second bathroom's door and the storage closet,
       // plus the short corridor down to the second bedroom.
       boxes: [area(-2.9, -1.6, -1.15, 0.25), area(-2.7, -1.9, 0.25, 1.15)],
-      opensTo: ["bedroom-2", "secondary-bath"],
     },
     {
       id: "secondary-bath",
@@ -105,7 +106,7 @@ const house3: House = {
       aliases: ["master bedroom", "main bedroom"],
       // The bedroom plus its walk-in closet (the L running north to the bathroom door).
       boxes: [area(1.25, 4.75, 0, 3.85), area(1.25, 3.0, -2.8, 0)],
-      opensTo: ["balcony", "primary-bath"],
+      opensTo: ["balcony"],
     },
     { id: "primary-bath", name: "Primary bathroom", kind: "room", parentId: "property", aliases: ["en-suite", "master bathroom"], boxes: [area(3.0, 5.05, -3.9, 0)] },
     // Runs along the whole south side, outside the living room and both bedrooms.

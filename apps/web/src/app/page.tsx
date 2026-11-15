@@ -5,14 +5,11 @@ export default function HomePage() {
   return (
     <>
       <h1>Choose a home</h1>
-      <p className="muted">Pick a listing to see the realtor-supplied context the assistant will use.</p>
+      <p className="muted">Walk through each home in 3D and ask our assistant anything along the way.</p>
       <div className="house-grid">
-        {houses.map((house, i) => (
+        {houses.map((house) => (
           <Link key={house.id} href={`/house/${house.slug}`} className="house-card">
-            <span className="eyebrow">
-              House {i + 1}
-              {house.scene && " · 3D tour"}
-            </span>
+            {house.scene && <span className="eyebrow">3D tour</span>}
             <h2>{house.title}</h2>
             <p className="muted">
               {house.address}, {house.city}, {house.region}

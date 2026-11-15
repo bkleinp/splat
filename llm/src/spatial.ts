@@ -1,42 +1,51 @@
 import type { Box, House, Vec3, Zone, ZoneKind } from "./types";
 
 // Spatial resolution service (blueprint § "Spatial Resolution Service").
-// Location is deterministic app logic: the model only ever sees the resolved,
-// named result, never raw coordinates. Two independent answers:
+// The geometry is deterministic app logic; deciding what "this" means is not.
+// This module measures, for the camera pose sent with a question:
 //   where you are   = the room (or doorway) containing the camera's x/z position
-//   what you're facing = the first object box the camera's 3D view ray hits
+//   how you look    = the camera's tilt
+//   line of sight   = every object box the 3D view ray passes through, in order
+//   around you      = objects nearby, with distance and direction
+// and the model weighs those against the question's wording to decide what
+// the visitor is asking about (see the location rules in context.ts). The
+// model never sees raw coordinates.
 
 /** The viewer camera, in the scene's world coordinates (blueprint scene.pose.v1). */
 export type Pose = { position: Vec3; forward?: Vec3 };
 
 export type ZoneRef = { id: string; name: string; kind: ZoneKind };
 
+/** Where an object is relative to the way the visitor faces (on the floor plan). */
+export type Bearing = "ahead" | "ahead-left" | "ahead-right" | "left" | "right" | "behind-left" | "behind-right" | "behind";
+
+/** `room` is the object's room; `inRoom` = the same room the visitor is standing in. */
+export type RayHit = { zone: ZoneRef; room?: string; inRoom: boolean; metres: number };
+export type NearbyObject = { zone: ZoneRef; room?: string; inRoom: boolean; metres: number; bearing: Bearing };
+
 export type ResolvedLocation = {
   /** Where you're standing: the entrance whose doorway you're in, else the room. */
   primaryZone?: ZoneRef;
   /** Containing zones, innermost first (an entrance's room). */
   ancestorZones: ZoneRef[];
-  /** The object you're facing, what "this" most likely means. */
-  facingZone?: ZoneRef;
-  /**
-   * How facingZone was found: "ray" = the view ray hits it; "nearest" = the ray
-   * hits nothing, so it's the object closest to where you're standing.
-   */
-  facingBy?: "ray" | "nearest";
-  /** Other objects in view or within reach, nearest first (blueprint: nearbyZones). */
-  nearbyZones: ZoneRef[];
+  /** Camera tilt, degrees: positive = looking up. Undefined if no direction was sent. */
+  pitch?: number;
+  /** Objects the view ray passes through, nearest first, with distance along the ray. */
+  rayHits: RayHit[];
+  /** Objects around the visitor (visible rooms), nearest first. */
+  nearbyObjects: NearbyObject[];
   confidence: number;
   resolution: "inside-zone" | "near-zone" | "unknown";
 };
 
 const NEAR_ROOM_METRES = 1.5; // outside every room box: still "near" a room within this
 const VIEW_METRES = 8; // how far the view ray reaches (the open-plan middle is ~7 m long)
-const SAME_HIT_METRES = 0.15; // two boxes hit this close together: the smaller (more specific) wins
-const NEAREST_METRES = 2.5; // ray hits nothing: fall back to the closest object within this
-const REACH_METRES = 1.0; // objects this close count as nearby whichever way you face
-const CONE_COS = Math.cos((35 * Math.PI) / 180); // half-angle of the "in view" cone
+const NEARBY_METRES = 3; // objects within this count as "around you"
+const DOORWAY_TOUCH_METRES = 0.1; // a room box this close to a doorway box is on one side of it
+const MAX_RAY_HITS = 4;
+const MAX_NEARBY = 6;
 
-const UNKNOWN: ResolvedLocation = { ancestorZones: [], nearbyZones: [], confidence: 0, resolution: "unknown" };
+const UNKNOWN: ResolvedLocation = { ancestorZones: [], rayHits: [], nearbyObjects: [], confidence: 0, resolution: "unknown" };
 
 const ref = (zone: Zone): ZoneRef => ({ id: zone.id, name: zone.name, kind: zone.kind });
 const isRoom = (z: Zone) => z.kind === "room" || z.kind === "outdoor_area";
@@ -46,6 +55,13 @@ const containsXZ = (b: Box, [x, , z]: Vec3) => x >= b.min[0] && x <= b.max[0] &&
 
 /** Floor area (x/z) of a box. */
 const footprint = (b: Box) => (b.max[0] - b.min[0]) * (b.max[2] - b.min[2]);
+
+/** Horizontal gap between two boxes' footprints (0 if they touch or overlap). */
+function boxGap(a: Box, b: Box): number {
+  const dx = Math.max(a.min[0] - b.max[0], 0, b.min[0] - a.max[0]);
+  const dz = Math.max(a.min[2] - b.max[2], 0, b.min[2] - a.max[2]);
+  return Math.hypot(dx, dz);
+}
 
 /** Horizontal distance from a point to a box (0 inside its footprint). */
 function distanceToBox(b: Box, [x, , z]: Vec3): number {
@@ -82,14 +98,25 @@ function unit(v: Vec3 | undefined): Vec3 | null {
   return l < 1e-9 ? null : [v[0] / l, v[1] / l, v[2] / l];
 }
 
-/** Cosine of the horizontal angle from the heading to a box's nearest point (1 = dead ahead). */
-function inCone(b: Box, [x, , z]: Vec3, dir: Vec3): number {
-  const fl = Math.hypot(dir[0], dir[2]);
-  if (fl < 1e-6) return 0;
+/**
+ * Which way a box lies from where you stand, relative to your heading, on the
+ * floor plan. In this scene's axes, facing +z puts +x on your left.
+ */
+function bearingTo(b: Box, [x, , z]: Vec3, dir: Vec3 | null): Bearing {
+  const fl = dir ? Math.hypot(dir[0], dir[2]) : 0;
   const px = Math.min(Math.max(x, b.min[0]), b.max[0]) - x;
   const pz = Math.min(Math.max(z, b.min[2]), b.max[2]) - z;
   const l = Math.hypot(px, pz);
-  return l < 1e-6 ? 1 : (px * dir[0] + pz * dir[2]) / (l * fl);
+  if (!dir || fl < 1e-6 || l < 1e-6) return "ahead"; // standing over it, or no heading
+  const fx = dir[0] / fl;
+  const fz = dir[2] / fl;
+  const angle = (Math.acos(Math.max(-1, Math.min(1, (px * fx + pz * fz) / l))) * 180) / Math.PI;
+  const left = fx * pz - fz * px < 0;
+  if (angle <= 30) return "ahead";
+  if (angle <= 75) return left ? "ahead-left" : "ahead-right";
+  if (angle <= 115) return left ? "left" : "right";
+  if (angle <= 155) return left ? "behind-left" : "behind-right";
+  return "behind";
 }
 
 /** The room a zone is in (itself, for a room). */
@@ -120,18 +147,19 @@ const smallestContaining = (zones: Zone[], position: Vec3) =>
     .flatMap((zone) => (zone.boxes ?? []).filter((b) => containsXZ(b, position)).map((box) => ({ zone, box })))
     .sort((a, b) => footprint(a.box) - footprint(b.box))[0]?.zone;
 
+const round = (n: number) => Math.round(n * 100) / 100;
+
 /**
- * Resolve a camera pose to a named location.
+ * Measure a camera pose against the house's zones.
  * 1. Where you are, from x/z: the entrance whose doorway box you're in, else
  *    the smallest room box containing you, else the nearest room within
  *    NEAR_ROOM_METRES ("near"), else "unknown" (never guess further).
- * 2. What you're facing: cast the camera's 3D view ray (heading and tilt)
- *    against the object boxes in rooms visible from yours (opensTo), and take
- *    the first hit. Two hits within SAME_HIT_METRES: the smaller box wins, so
- *    the sink beats the counter it's set into.
- * 3. If the ray hits nothing (looking at a bare wall, the ceiling, the floor),
- *    the object closest to where you're standing, preferring your own room.
- * 4. Nearby: other objects within reach, or in a ±35° cone within view range.
+ * 2. Line of sight: every object box (in rooms visible from where you stand:
+ *    your room, its open-plan neighbours via opensTo, and from a doorway the
+ *    rooms on both sides) that the 3D view ray passes through within
+ *    VIEW_METRES, nearest first, with distance along the ray.
+ * 3. Around you: objects within NEARBY_METRES, nearest first, with bearing
+ *    (ahead, left, behind…) and whether they're in your own room.
  */
 export function resolvePose(house: House, pose: Pose | undefined): ResolvedLocation {
   if (!pose) return UNKNOWN;
@@ -158,67 +186,64 @@ export function resolvePose(house: House, pose: Pose | undefined): ResolvedLocat
   const primary = entrance ?? room;
   const ancestorZones = ancestorsOf(primary, byId);
 
+  // Rooms you can see into: open-plan neighbours, plus, from a doorway, the
+  // rooms on both sides of it (the room boxes touching the doorway box).
   const visible = visibleRoomIds(room, house.zones);
+  if (entrance) {
+    for (const r of rooms) {
+      const touches = r.boxes!.some((rb) => entrance.boxes!.some((eb) => boxGap(rb, eb) <= DOORWAY_TOUCH_METRES));
+      if (touches) visibleRoomIds(r, house.zones).forEach((id) => visible.add(id));
+    }
+  }
   const objects = house.zones.filter((z) => {
     if (!z.target?.length) return false;
     const r = roomOf(z, byId);
     return r !== undefined && visible.has(r.id);
   });
 
-  // 2. What the view ray hits first.
-  type Hit = { zone: Zone; t: number; area: number };
-  let hit: Hit | undefined;
+  // 2. Line of sight: each object's nearest entry point along the ray.
+  const hits: { zone: Zone; t: number }[] = [];
   if (dir) {
     for (const zone of objects) {
+      let best: number | undefined;
       for (const box of zone.target!) {
         const t = rayHit(box, position, dir);
-        if (t === null || t > VIEW_METRES) continue;
-        const area = footprint(box);
-        if (!hit || t < hit.t - SAME_HIT_METRES || (Math.abs(t - hit.t) <= SAME_HIT_METRES && area < hit.area)) {
-          hit = { zone, t, area };
-        }
+        if (t !== null && t <= VIEW_METRES && (best === undefined || t < best)) best = t;
       }
+      if (best !== undefined) hits.push({ zone, t: best });
     }
+    hits.sort((a, b) => a.t - b.t);
   }
 
-  // 3. Nothing hit: the closest object to where you're standing (your room's first).
-  let facing = hit?.zone;
-  let facingBy: ResolvedLocation["facingBy"] = hit ? "ray" : undefined;
-  if (!facing) {
-    const closest = objects
-      .map((zone) => ({
+  // 3. Around you.
+  const nearby = objects
+    .map((zone) => {
+      const boxes = zone.target!;
+      const closest = boxes.reduce((a, b) => (distanceToBox(b, position) < distanceToBox(a, position) ? b : a));
+      return {
         zone,
-        d: Math.min(...zone.target!.map((b) => distanceToBox(b, position))),
-        mine: roomOf(zone, byId)?.id === room.id,
-      }))
-      .filter((c) => c.d <= NEAREST_METRES)
-      .sort((a, b) => Number(b.mine) - Number(a.mine) || a.d - b.d)[0];
-    if (closest) {
-      facing = closest.zone;
-      facingBy = "nearest";
-    }
-  }
+        d: distanceToBox(closest, position),
+        bearing: bearingTo(closest, position, dir),
+        inRoom: roomOf(zone, byId)?.id === room.id,
+      };
+    })
+    .filter((c) => c.d <= NEARBY_METRES)
+    .sort((a, b) => a.d - b.d);
 
-  // 4. Nearby.
-  const exclude = new Set([primary.id, room.id, facing?.id, ...ancestorZones.map((z) => z.id)]);
-  const nearbyZones = objects
-    .filter((zone) => !exclude.has(zone.id))
-    .map((zone) => ({
-      zone,
-      d: Math.min(...zone.target!.map((b) => distanceToBox(b, position))),
-      ahead: dir ? Math.max(...zone.target!.map((b) => inCone(b, position, dir))) >= CONE_COS : false,
-    }))
-    .filter((c) => c.d <= REACH_METRES || (c.ahead && c.d <= VIEW_METRES))
-    .sort((a, b) => a.d - b.d)
-    .slice(0, 5)
-    .map((c) => ref(c.zone));
+  const pitch = dir ? round((Math.atan2(dir[1], Math.hypot(dir[0], dir[2])) * 180) / Math.PI) : undefined;
+  const roomInfo = (zone: Zone) => {
+    const r = roomOf(zone, byId);
+    return { room: r?.name, inRoom: r?.id === room.id };
+  };
 
   return {
     primaryZone: ref(primary),
     ancestorZones,
-    facingZone: facing ? ref(facing) : undefined,
-    facingBy,
-    nearbyZones,
+    pitch,
+    rayHits: hits.slice(0, MAX_RAY_HITS).map((h) => ({ zone: ref(h.zone), ...roomInfo(h.zone), metres: round(h.t) })),
+    nearbyObjects: nearby
+      .slice(0, MAX_NEARBY)
+      .map((c) => ({ zone: ref(c.zone), ...roomInfo(c.zone), metres: round(c.d), bearing: c.bearing })),
     confidence,
     resolution,
   };
@@ -226,11 +251,12 @@ export function resolvePose(house: House, pose: Pose | undefined): ResolvedLocat
 
 /**
  * How relevant each zone is to the visitor's current location, 0–1. Used to
- * rank document sections (blueprint § "Retrieval ranking": zone_match).
- *   1.0  the object they're facing
- *   0.9  the zone they're in (room or entrance), or anything else inside it
- *   0.8  a containing zone (an entrance's room)
- *   0.7  objects in view or within reach
+ * rank document sections (blueprint § "Retrieval ranking": zone_match). Every
+ * candidate the model might pick gets its evidence near the top.
+ *   1.0  first object on the line of sight; 0.95 the others it passes through
+ *   0.9  objects around them, the closest highest (down to 0.75 at 3 m)
+ *   0.8  the room or doorway they're in, and anything else inside it
+ *   0.7  the room around a doorway they're in
  */
 export function zoneRelevance(house: House, location: ResolvedLocation): Map<string, number> {
   const scores = new Map<string, number>();
@@ -247,24 +273,10 @@ export function zoneRelevance(house: House, location: ResolvedLocation): Map<str
   };
 
   for (const zone of house.zones) {
-    if (isInside(zone, primaryId)) set(zone.id, 0.9);
+    if (isInside(zone, primaryId)) set(zone.id, 0.8);
   }
-  if (location.facingZone) set(location.facingZone.id, 1);
-  for (const z of location.ancestorZones) set(z.id, 0.8);
-  for (const z of location.nearbyZones) set(z.id, 0.7);
+  for (const z of location.ancestorZones) set(z.id, 0.7);
+  for (const o of location.nearbyObjects) set(o.zone.id, 0.9 - Math.min(o.metres, NEARBY_METRES) * 0.05);
+  location.rayHits.forEach((h, i) => set(h.zone.id, i === 0 ? 1 : 0.95));
   return scores;
-}
-
-/**
- * Short label for the UI: where you are → what you're facing.
- * "Kitchen → Sink", "Second bathroom · Entrance → Shower", or "Living room · near Couch"
- * when the view ray hits nothing and the closest object stands in.
- */
-export function locationLabel(location: ResolvedLocation): string | undefined {
-  const { primaryZone, ancestorZones, facingZone, facingBy } = location;
-  if (!primaryZone) return undefined;
-  const room = ancestorZones.find((z) => z.kind === "room" || z.kind === "outdoor_area");
-  const where = room ? `${room.name} · ${primaryZone.name}` : primaryZone.name;
-  if (!facingZone) return where;
-  return facingBy === "nearest" ? `${where} · near ${facingZone.name}` : `${where} → ${facingZone.name}`;
 }

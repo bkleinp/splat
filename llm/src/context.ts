@@ -12,10 +12,17 @@ export const SYSTEM_PROMPT = `You're the friendly listing agent's assistant for 
 Voice: warm, upbeat, and conversational, like a good realtor at an open house who's genuinely excited to show the place off. Talk like a person, not a database: "Great question!", "You'll love this one", and "the island seats four, perfect for gathering around" are the right energy. When it fits, point out a related feature from the evidence they might enjoy, or suggest reaching out to the listing agent to ask questions or book a showing. You can't book, schedule, or contact anyone yourself, so never offer to. Keep it natural; don't oversell, gush in every sentence, or end every answer with the same pitch. Always talk to the visitor directly ("you're looking at…"), never about them ("the visitor is…").
 
 Where the visitor is:
-- Each visitor message starts with <visitor_location>, saying where in the home they were standing when they asked, worked out from their position in the 3D tour. The app works this out; trust it.
-- Use the location only to understand words like "here", "this room", "these counters", or "that appliance". It tells you where they are, not anything about the home itself. Don't mention where they're standing unless the question is about where they are.
+- Each visitor message starts with <visitor_location>, measured from their position in the 3D tour when they asked: the room they're standing in, how they're tilting their view, what their line of sight passes through (in order, with distance), and the objects around them (distance and direction). The measurements are accurate; trust them.
+- Use the location only to understand words like "here", "this", "that", "these", "this room". It tells you where they are, not anything about the home itself. Don't mention where they're standing unless the question is about where they are.
 - "In" is the room they're standing in; "At: Entrance" means they're in that room's doorway (the room is under "Within").
-- "Facing" is the object their view lands on: it's what "this" or "that" most likely means. "Nearest object" means they aren't looking at anything in particular, so it's only a hint: use it for "this" if the question fits it, otherwise answer about the room.
+- Work out what "this" / "that" / "these" refers to by weighing everything together:
+  - The first thing their line of sight hits is what's in the middle of their view: usually what they mean. Later hits are further along the same line, behind it.
+  - Closer is likelier. Something 0.5 m away beats something 4 m away, and a nearby object right ahead is a strong candidate even if the line of sight just misses it.
+  - Direction matters as much as distance: "this" is almost always ahead of them. Things to their side are possible; things behind them are unlikely unless the question names them.
+  - Things in the room they're standing in are likelier than things in the next room.
+  - Tilt: looking down suggests low things (a sink, a bed, a toilet); looking level or up suggests things at eye height (cabinets, a TV, a mirror, a window).
+  - The question's own words win: "is this sofa included?" means the sofa even if their line of sight hits something else; "these counters" means the counters.
+  - If two candidates are about equally likely and the answer would differ, say briefly which you're assuming ("If you mean the sink, ...") or cover both in a sentence. Never mention lines of sight, measurements, or this data.
 - For "this room"-style questions, answer from the evidence under "Where the visitor is now". If that evidence doesn't cover it, say so rather than borrowing facts from another room.
 - If they ask about another part of the home, or the whole home, just answer it. Never imply they're somewhere they're not.
 - Always go by the location on their latest message; earlier messages may have been asked from other rooms.
@@ -96,23 +103,30 @@ export function formatLocation(location: ResolvedLocation, { brief = false } = {
   if (!location.primaryZone) {
     return "<visitor_location>Unknown. Don't assume they're in any particular room; answer about the whole home.</visitor_location>";
   }
-  const { primaryZone, ancestorZones, facingZone, facingBy, nearbyZones, resolution } = location;
+  const { primaryZone, ancestorZones, pitch, rayHits, nearbyObjects, resolution } = location;
   const where = resolution === "near-zone" ? "Near" : primaryZone.kind === "entrance" ? "At" : "In";
+  // Same-named objects exist in several rooms (Bed, Closet), so name the room when it isn't theirs.
+  const named = (o: { zone: { name: string }; room?: string; inRoom: boolean }) =>
+    o.inRoom || !o.room ? o.zone.name : `${o.zone.name} (${o.room})`;
   if (brief) {
     const within = ancestorZones[0] ? ` (${ancestorZones[0].name})` : "";
-    const facing = facingZone && facingBy === "ray" ? `, facing ${facingZone.name}` : "";
-    return `<visitor_location>Was ${where.toLowerCase()}: ${primaryZone.name}${within}${facing}</visitor_location>`;
+    const sight = rayHits[0] ? `, line of sight on ${named(rayHits[0])}` : "";
+    return `<visitor_location>Was ${where.toLowerCase()}: ${primaryZone.name}${within}${sight}</visitor_location>`;
   }
   const lines = [`${where}: ${primaryZone.name} (${primaryZone.kind.replace("_", " ")})`];
   if (ancestorZones.length > 0) lines.push(`Within: ${ancestorZones.map((z) => z.name).join(" > ")}`);
-  if (facingZone) {
-    lines.push(
-      facingBy === "nearest"
-        ? `Nearest object (not looking at anything in particular): ${facingZone.name}`
-        : `Facing: ${facingZone.name}`,
-    );
+  if (pitch !== undefined) {
+    const tilt = Math.abs(pitch) < 8 ? "level" : `${pitch < 0 ? "down" : "up"} about ${Math.round(Math.abs(pitch) / 5) * 5}°`;
+    lines.push(`Looking: ${tilt}`);
   }
-  if (nearbyZones.length > 0) lines.push(`Also in view: ${nearbyZones.map((z) => z.name).join(", ")}`);
+  lines.push(
+    rayHits.length > 0
+      ? `Line of sight hits, in order: ${rayHits.map((h) => `${named(h)} at ${h.metres.toFixed(1)} m`).join("; ")}`
+      : "Line of sight hits: nothing (a bare wall, the floor or the ceiling)",
+  );
+  if (nearbyObjects.length > 0) {
+    lines.push(`Around them: ${nearbyObjects.map((o) => `${named(o)} ${o.metres.toFixed(1)} m ${o.bearing}`).join("; ")}`);
+  }
   lines.push(`Location confidence: ${location.confidence >= 0.8 ? "high" : location.confidence >= 0.5 ? "medium" : "low"}`);
   return `<visitor_location>\n${lines.join("\n")}\n</visitor_location>`;
 }

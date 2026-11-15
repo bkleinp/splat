@@ -60,9 +60,10 @@ export type Zone = {
    */
   target?: Box[];
   /**
-   * Rooms only: other rooms you can see into from here (open plan, a
-   * doorway). Stands in for line-of-sight, so features behind a wall are
-   * never "in view". Symmetric: listing it on one side is enough.
+   * Rooms only: rooms that are open plan with this one (no wall between), so
+   * the line of sight carries on into them. Rooms joined only by a doorway
+   * aren't listed: you see into those while standing in the doorway (an
+   * entrance zone). Symmetric: listing it on one side is enough.
    */
   opensTo?: string[];
 };
