@@ -1,3 +1,4 @@
+import { multiStoryHouse } from "./multi-story-house";
 import type { Box, House } from "./types";
 
 // Fake realtor-supplied context for the demo. Listing details are fictional.
@@ -705,7 +706,7 @@ const house3: House = {
   ],
 };
 
-export const houses: House[] = [house3];
+export const houses: House[] = [house3, multiStoryHouse];
 
 export function getHouse(slug: string): House | undefined {
   return houses.find((h) => h.slug === slug);

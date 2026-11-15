@@ -104,7 +104,8 @@ export function formatLocation(location: ResolvedLocation, { brief = false } = {
     return "<visitor_location>Unknown. Don't assume they're in any particular room; answer about the whole home.</visitor_location>";
   }
   const { primaryZone, ancestorZones, pitch, rayHits, nearbyObjects, resolution } = location;
-  const where = resolution === "near-zone" ? "Near" : primaryZone.kind === "entrance" ? "At" : "In";
+  const where =
+    resolution === "near-zone" ? "Near" : primaryZone.kind === "entrance" ? "At" : primaryZone.kind === "floor" ? "On" : "In";
   // Same-named objects exist in several rooms (Bed, Closet), so name the room when it isn't theirs.
   const named = (o: { zone: { name: string }; room?: string; inRoom: boolean }) =>
     o.inRoom || !o.room ? o.zone.name : `${o.zone.name} (${o.room})`;
@@ -114,6 +115,12 @@ export function formatLocation(location: ResolvedLocation, { brief = false } = {
     return `<visitor_location>Was ${where.toLowerCase()}: ${primaryZone.name}${within}${sight}</visitor_location>`;
   }
   const lines = [`${where}: ${primaryZone.name} (${primaryZone.kind.replace("_", " ")})`];
+  if (primaryZone.kind === "floor") {
+    // Only the storey is known (rooms there aren't mapped): no line of sight to report.
+    lines.push("Room: not known. Don't guess which room they're in; use the floor to narrow the answer.");
+    lines.push(`Location confidence: ${location.confidence >= 0.8 ? "high" : location.confidence >= 0.5 ? "medium" : "low"}`);
+    return `<visitor_location>\n${lines.join("\n")}\n</visitor_location>`;
+  }
   if (ancestorZones.length > 0) lines.push(`Within: ${ancestorZones.map((z) => z.name).join(" > ")}`);
   if (pitch !== undefined) {
     const tilt = Math.abs(pitch) < 8 ? "level" : `${pitch < 0 ? "down" : "up"} about ${Math.round(Math.abs(pitch) / 5) * 5}°`;
