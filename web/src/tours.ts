@@ -15,6 +15,25 @@ type Tour = {
     viewer: ExperienceSettings;
     /** Walking feel. */
     walk: Partial<WalkSettings>;
+    /** Floor plan view. */
+    plan?: {
+        /**
+         * Outline of the home, corners as [x, z] in world space, drawn on the tour's settings
+         * page. The floor plan hides everything outside it and centers on it; walking still shows
+         * everything. Without one the floor is found automatically.
+         */
+        outline?: [number, number][];
+        /**
+         * World height (y) the floor plan hides everything below: stray splats and backdrop
+         * under the floor, seen when the plan is tilted. Set on the settings page.
+         */
+        bottom?: number;
+        /**
+         * Haze cleanup for the floor plan: `haze` hides splats fainter than that opacity (0-1),
+         * `maxSize` hides splats larger than that many meters (null keeps all).
+         */
+        cleanup?: { haze?: number; maxSize?: number | null };
+    };
 };
 
 type TourSummary = { name: string; title: string };

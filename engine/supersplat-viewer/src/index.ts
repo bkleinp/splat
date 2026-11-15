@@ -531,6 +531,14 @@ const createViewer = async (options: CreateViewerOptions): Promise<ViewerHandle>
         getWalkSettings: () => viewer.getWalkSettings(),
         setWalkSettings: (walkSettings) => viewer.setWalkSettings(walkSettings),
         setPostEffects: (postEffects) => viewer.setPostEffects(postEffects),
+        setPlanView: (on) => viewer.setPlanView(on),
+        setCutHeight: (height) => viewer.setCutHeight(height),
+        getPlanInfo: () => viewer.getPlanInfo(),
+        setPlanOutline: (points, frame) => viewer.setPlanOutline(points, frame),
+        setPlanBottom: (y) => viewer.setPlanBottom(y),
+        setPlanCleanup: (cleanup) => viewer.setPlanCleanup(cleanup),
+        screenToFloor: (x, y) => viewer.screenToFloor(x, y),
+        floorToScreen: (x, z) => viewer.floorToScreen(x, z),
         requestFullscreen: () => viewer.requestFullscreen(),
         exitFullscreen: () => viewer.exitFullscreen(),
         startXR: (mode) => viewer.startXR(mode),
@@ -567,6 +575,8 @@ console.log(`SuperSplat Viewer v${appVersion} | Engine v${engineVersion} (${engi
 export type { CaptureResult } from './capture';
 export type { CreateViewerOptions, ViewerAssets, ViewerFlags, WalkSettings } from './options';
 export type { ExperienceSettings, PostEffectSettings } from './settings';
-export type { CaptureOptions, QualityLevel, ViewerHandle, ViewerState, XrMode } from './types';
+export type { CaptureOptions, PlanInfo, QualityLevel, ViewerHandle, ViewerState, XrMode } from './types';
 export { createViewer };
 export { DEFAULT_WALK_SETTINGS } from './cameras/tour-walk-controller';
+export type { PlanCleanup } from './height-cut';
+export { DEFAULT_PLAN_CLEANUP } from './height-cut';

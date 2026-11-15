@@ -7,8 +7,9 @@ import { setYawBasis } from './camera-utils';
 import { WalkController } from './walk-controller';
 
 // Home-tour walking, layered on WalkController without changing its physics: a human pace with
-// gentle speed-up and slow-down, no jumping, and a subtle head bob, all tunable through
-// WalkSettings. Lives in its own file so upstream merges of walk-controller.ts stay conflict-free.
+// gentle speed-up and slow-down, the stock jump at a set height, and a subtle head bob, all
+// tunable through WalkSettings. Lives in its own file so upstream merges of walk-controller.ts
+// stay conflict-free.
 
 /** Fixed physics step of WalkController (1 / 60 s). */
 const FIXED_DT = 1 / 60;
@@ -28,8 +29,16 @@ const DEFAULT_WALK_SETTINGS: Readonly<WalkSettings> = Object.freeze({
     headBob: 1,
     stepLength: 0.7,
     eyeHeight: 1.5,
-    fov: 90
+    fov: 90,
+    // the stock jump: 4 m/s take-off under 9.8 m/s² gravity
+    jumpHeight: 0.8
 });
+
+/** Vertical speed, m/s, above which the walker counts as airborne (jumping or falling). */
+const AIRBORNE_SPEED = 1;
+
+/** Seconds of near-level motion after which a landing counts, so the jump's apex doesn't. */
+const LANDED_TIME = 0.15;
 
 const forward = new Vec3();
 const right = new Vec3();
@@ -47,6 +56,9 @@ class TourWalkController extends WalkController {
     private _base = new Vec3();
 
     private _hasBase = false;
+
+    /** Seconds since the walker last moved vertically at airborne speed. */
+    private _levelTime = LANDED_TIME;
 
     private _reducedMotion = false;
 
@@ -83,7 +95,11 @@ class TourWalkController extends WalkController {
         s.stepLength = math.clamp(s.stepLength, 0.2, 2);
         s.eyeHeight = math.clamp(s.eyeHeight, 0.5, 3);
         s.fov = math.clamp(s.fov, 30, 120);
+        s.jumpHeight = math.clamp(s.jumpHeight, 0, 3);
         this._settings = s;
+
+        // take-off speed that peaks at jumpHeight: h = v² / 2g
+        this.jumpSpeed = Math.sqrt(2 * this.gravity * s.jumpHeight);
 
         // WalkController adds input * moveGroundSpeed to the velocity each step, then keeps
         // `keep` of it (velocityDampingGround). Choose both so velocity settles at `speed` with
@@ -109,9 +125,11 @@ class TourWalkController extends WalkController {
     }
 
     update(deltaTime: number, inputFrame: CameraFrame, camera: Camera): void {
-        // no jumping in a home: drop the jump signal before the walk physics sees it
-        const move = inputFrame.deltas.move.read();
-        inputFrame.deltas.move.append([move[0], 0, move[2]]);
+        // jump height 0 turns jumping off: drop the jump signal before the walk physics sees it
+        if (this._settings.jumpHeight <= 0) {
+            const move = inputFrame.deltas.move.read();
+            inputFrame.deltas.move.append([move[0], 0, move[2]]);
+        }
 
         super.update(deltaTime, inputFrame, camera);
 
@@ -127,14 +145,19 @@ class TourWalkController extends WalkController {
         const dz = this._base.z - prevBase.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
 
+        // no steps in mid-air: pause the bob from take-off until shortly after landing
+        const verticalSpeed = Math.abs(this._base.y - prevBase.y) / deltaTime;
+        this._levelTime = verticalSpeed > AIRBORNE_SPEED ? 0 : this._levelTime + deltaTime;
+        const airborne = this._levelTime < LANDED_TIME;
+
         // smooth the measured speed so the bob fades in and out instead of popping
         const speed = Math.min(dist / deltaTime, 10);
         this._speed = math.lerp(this._speed, speed, 1 - Math.exp(-deltaTime / 0.1));
 
         const { headBob, stepLength } = this._settings;
-        const amount = this._reducedMotion ? 0 : headBob;
+        const amount = this._reducedMotion || airborne ? 0 : headBob;
         const target = amount * math.clamp(this._speed / (this._settings.speed * 0.85), 0, 1);
-        this._intensity = math.lerp(this._intensity, target, 1 - Math.exp(-deltaTime / 0.2));
+        this._intensity = math.lerp(this._intensity, target, 1 - Math.exp(-deltaTime / (airborne ? 0.06 : 0.2)));
 
         if (this._intensity < 1e-4) return;
 
@@ -156,6 +179,7 @@ class TourWalkController extends WalkController {
         this._intensity = 0;
         this._stepPhase = 0;
         this._hasBase = false;
+        this._levelTime = LANDED_TIME;
     }
 }
 

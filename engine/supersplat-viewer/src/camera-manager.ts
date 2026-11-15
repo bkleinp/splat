@@ -1,4 +1,4 @@
-import { Vec3 } from 'playcanvas';
+import { Vec2, Vec3 } from 'playcanvas';
 import type { BoundingBox } from 'playcanvas';
 
 import { createFigure8Track } from './animation/create-figure8-track';
@@ -48,6 +48,62 @@ const TURN_LEAD = 0.8;
 // in a fixed time still has speed to lose and stops abruptly on a long move.
 const settleFrom = (slope: number) => (x: number) =>
     1 - Math.pow(1 - x, SETTLE_POWER) * (1 + (SETTLE_POWER - slope) * x);
+
+// Tour fork plan view: field of view, room around the scene, how far the view leans so the walker's
+// heading stays up the screen, and the flight time between walking and the plan.
+const PLAN_FOV = 30;
+const PLAN_MARGIN = 1.2;
+const PLAN_TILT = 0.02;
+const PLAN_DURATION = 1.6;
+
+// Orbit pitch limits, degrees (negative looks down): the stock range, and the plan view's, which
+// stops a little above the horizon so the camera can't swing under the floor.
+const ORBIT_PITCH_RANGE = new Vec2(-90, 90);
+const PLAN_PITCH_RANGE = new Vec2(-90, -10);
+
+// The plan view frames the floor the walker is on, found by casting a grid of rays down through
+// the collision: hits this close to the floor's height count as that floor (a step down to a
+// terrace still does; the storey below does not).
+const FOOTPRINT_GRID = 64;
+const FOOTPRINT_LEVEL = 0.9;
+
+/** Centre and half size, horizontally, of a floor plan in world space. */
+type Footprint = { x: number; z: number; halfX: number; halfZ: number };
+
+// The horizontal extent of the floor at `floorY`, or the scene's bounds without collision (or when
+// too little of the floor is found to trust). Scans usually carry a backdrop of large splats far
+// outside the rooms, so the scene's own bounds frame the rooms small.
+const findFloorFootprint = (collision: Collision | null, bbox: BoundingBox, floorY: number): Footprint => {
+    const fallback = { x: bbox.center.x, z: bbox.center.z, halfX: bbox.halfExtents.x, halfZ: bbox.halfExtents.z };
+    if (!collision) return fallback;
+
+    const minX = bbox.center.x - bbox.halfExtents.x;
+    const minZ = bbox.center.z - bbox.halfExtents.z;
+    const stepX = (bbox.halfExtents.x * 2) / FOOTPRINT_GRID;
+    const stepZ = (bbox.halfExtents.z * 2) / FOOTPRINT_GRID;
+    const fromY = floorY + 1.5;
+
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let z0 = Infinity;
+    let z1 = -Infinity;
+    let hits = 0;
+    for (let i = 0; i <= FOOTPRINT_GRID; i++) {
+        const x = minX + i * stepX;
+        for (let j = 0; j <= FOOTPRINT_GRID; j++) {
+            const z = minZ + j * stepZ;
+            const hit = collision.queryRay(x, fromY, z, 0, -1, 0, 1.5 + FOOTPRINT_LEVEL);
+            if (!hit || Math.abs(hit.y - floorY) > FOOTPRINT_LEVEL) continue;
+            x0 = Math.min(x0, x);
+            x1 = Math.max(x1, x);
+            z0 = Math.min(z0, z);
+            z1 = Math.max(z1, z);
+            hits++;
+        }
+    }
+    if (hits < 8) return fallback;
+    return { x: (x0 + x1) / 2, z: (z0 + z1) / 2, halfX: (x1 - x0) / 2 + stepX, halfZ: (z1 - z0) / 2 + stepZ };
+};
 
 // Walk mode is only enabled when the scene's horizontal footprint is large
 // enough to walk around in. Vertical extent (Y) is irrelevant — a tall but
@@ -99,6 +155,17 @@ class CameraManager {
 
     // Tour fork: change how walking feels, immediately.
     setWalkSettings: (settings: Partial<WalkSettings>) => void;
+
+    // Tour fork: fly up to a top-down view of `footprint` on the floor at `floorY` (orbit
+    // controls: drag to tilt and turn, wheel or pinch to zoom), or back down to where the camera
+    // left from. Allowed in walk-only mode, which otherwise keeps the camera walking.
+    setPlanView: (on: boolean, floorY: number, footprint: Footprint) => void;
+
+    // Tour fork: the floor plan around the floor at `floorY`.
+    findFootprint: (floorY: number) => Footprint;
+
+    // Tour fork: in the plan view, fly to frame a new footprint (the plan's outline changed).
+    reframePlan: (floorY: number, footprint: Footprint) => void;
 
     // Attach (or clear) collision after construction. The viewer reveals the scene without
     // waiting for collision data, which can be larger than the splats themselves, so this
@@ -262,6 +329,78 @@ class CameraManager {
             global.app.renderNextFrame = true;
         };
 
+        // plan view (tour fork): the pose and mode to return to, and whether a plan switch is
+        // under way, which lets walk-only's mode guard through
+        let planActive = false;
+        let planSwitching = false;
+        let planReturnMode: CameraMode = 'walk';
+        const planReturn = new Camera();
+
+        this.findFootprint = (floorY: number) => findFloorFootprint(controllers.walk.collision, bbox, floorY);
+
+        const planEase = settleFrom(0);
+        const planTurnEase = (x: number) => planEase(Math.min(1, x / TURN_LEAD));
+
+        // fly the orbit camera to straight down over `footprint`, high enough to see all of it,
+        // with the top of the screen where the walker was facing
+        const flyToPlan = (floorY: number, footprint: Footprint) => {
+            const fov = PLAN_FOV;
+            // fit the narrower of the screen's two directions: on a phone held upright, the width
+            const reach = Math.max(footprint.halfX, footprint.halfZ, 2);
+            const { width, height: screenHeight } = global.app.graphicsDevice;
+            const aspect = width > 0 && screenHeight > 0 ? width / screenHeight : 1;
+            const tanHalf = Math.tan((fov / 360) * Math.PI) * Math.min(1, aspect);
+            const height = (reach * PLAN_MARGIN) / tanHalf;
+            planReturn.calcFocusPoint(tmpv);
+            tmpv.sub(planReturn.position);
+            tmpv.y = 0;
+            if (tmpv.lengthSq() < 1e-8) tmpv.set(0, 0, -1);
+            tmpv.normalize();
+            tmpv2.set(footprint.x, floorY, footprint.z);
+            const eye = new Vec3().copy(tmpv2).add(tmpv.mulScalar(-height * PLAN_TILT));
+            eye.y += height;
+            tmpCamera.look(eye, tmpv2);
+            tmpCamera.fov = fov;
+
+            controllers.orbit.goto(tmpCamera);
+            startTransition(PLAN_DURATION, planEase, planTurnEase);
+            global.app.renderNextFrame = true;
+        };
+
+        this.reframePlan = (floorY: number, footprint: Footprint) => {
+            if (planActive) flyToPlan(floorY, footprint);
+        };
+
+        this.setPlanView = (on: boolean, floorY: number, footprint: Footprint) => {
+            if (on === planActive) return;
+            const ease = planEase;
+            const turnEase = planTurnEase;
+
+            if (on) {
+                planReturn.copy(this.camera);
+                planReturnMode = state.cameraMode === 'anim' ? defaultMode() : state.cameraMode;
+                planActive = true;
+                planSwitching = true;
+                state.cameraMode = 'orbit';
+                planSwitching = false;
+                // the plan is seen from above: tilt down to the horizon's edge, never under the floor
+                controllers.orbit.controller.pitchRange = PLAN_PITCH_RANGE;
+                flyToPlan(floorY, footprint);
+            } else {
+                controllers.orbit.controller.pitchRange = ORBIT_PITCH_RANGE;
+                planActive = false;
+                planSwitching = true;
+                if (planReturnMode === 'orbit') {
+                    controllers.orbit.goto(planReturn);
+                } else {
+                    state.cameraMode = planReturnMode;
+                }
+                planSwitching = false;
+                startTransition(PLAN_DURATION, ease, turnEase);
+            }
+            global.app.renderNextFrame = true;
+        };
+
         this.snap = () => {
             getController(state.cameraMode).onEnter(this.camera);
             target.copy(this.camera);
@@ -393,8 +532,14 @@ class CameraManager {
             // walk-only: undo any switch away from walk (shortcuts, picking, framing). The undo
             // fires this handler again with walk as the value; walk was never left, so there is
             // nothing to exit or enter
-            if (walkOnly) {
-                if (value !== 'walk') state.cameraMode = 'walk';
+            // The plan view holds orbit the same way; only setPlanView's own switches get through
+            if (walkOnly && !planSwitching) {
+                const held = planActive ? 'orbit' : 'walk';
+                if (value !== held) state.cameraMode = held;
+                return;
+            }
+            if (planActive && !planSwitching && value !== 'orbit') {
+                state.cameraMode = 'orbit';
                 return;
             }
 
@@ -421,9 +566,9 @@ class CameraManager {
             const prevController = getController(prev);
             prevController.onExit(this.camera);
 
-            // enter new controller
+            // enter new controller; leaving the plan view returns to the pose it was entered from
             const newController = getController(value);
-            newController.onEnter(this.camera);
+            newController.onEnter(planSwitching && !planActive ? planReturn : this.camera);
         });
 
         // pressing play at (or within a frame of) the end of a play-once animation
@@ -534,3 +679,4 @@ class CameraManager {
 }
 
 export { CameraManager, isWalkAllowed };
+export type { Footprint };

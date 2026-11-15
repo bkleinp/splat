@@ -75,6 +75,7 @@
     "headBob": 1,
     "stepLength": 0.7,
     "eyeHeight": 1.5,
-    "fov": 90
+    "fov": 90,
+    "jumpHeight": 0.8
   }
 }
