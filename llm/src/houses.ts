@@ -1,3 +1,4 @@
+import { businessRoom } from "./business-room";
 import { multiStoryHouse } from "./multi-story-house";
 import type { Box, House } from "./types";
 
@@ -912,7 +913,7 @@ const house3: House = {
   ],
 };
 
-export const houses: House[] = [house3, multiStoryHouse];
+export const houses: House[] = [house3, multiStoryHouse, businessRoom];
 
 export function getHouse(slug: string): House | undefined {
   return houses.find((h) => h.slug === slug);
