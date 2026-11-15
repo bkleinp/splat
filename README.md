@@ -36,6 +36,10 @@ click one to try it. Save writes them to the tour file.
 windows); the settings page's **Outside view** checkbox switches it off for the plain background
 (`showSkybox: false`). Images from other sites go through `/api/tours/<name>/skybox`.
 
+**Business Room** (`/business-room`) is our own LiDAR scan (Polycam point cloud), turned into splats with
+`scripts/points-to-splats.cjs` and compressed with PlayCanvas `splat-transform` (commands in the script). Its files
+are served from `apps/web/public/scans/business-room/`.
+
 ## Setup (Windows)
 
 ```powershell
