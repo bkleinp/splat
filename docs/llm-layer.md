@@ -97,10 +97,11 @@ Replaying the 32-line log through the 3D resolver (the log predates pitch loggin
 **The code measures; the model decides.** `resolvePose` turns the pose sent with a question into measurements. The model weighs those against the question's wording to work out what "this" means.
 
 **Measurements:**
-1. **Where you are**, from x/z:
+1. **Where you are**, from x/z, and from the camera's height for the storey (room and doorway boxes span their storey's camera heights; the stairs have their own):
    - the entrance whose doorway box you're in;
    - else the smallest room box containing you;
-   - else the nearest room within 1.5 m (`near-zone`);
+   - else the nearest room on your storey within 1.5 m (`near-zone`);
+   - else the storey itself (a `floor` zone: "On: Second floor", room not known);
    - else `unknown`.
 2. **Tilt:** looking up, level, or down N°.
 3. **Line of sight:** every object box the 3D view ray passes through, in order, with distance along the ray (up to 4 hits, within 8 m).
@@ -109,7 +110,7 @@ Replaying the 32-line log through the 3D resolver (the log predates pitch loggin
 Steps 3 and 4 only consider rooms you can actually see into:
 - your room;
 - its **open-plan** neighbours (`opensTo`: kitchen ↔ dining ↔ living room, dining ↔ hallway, the balcony through the glass);
-- when you're standing **in a doorway**, the rooms on both sides of it (room boxes touching the doorway box).
+- when you're standing **in a doorway**, the rooms on both sides of it (room boxes on the same storey touching the doorway box).
 
 Rooms behind a door don't leak through walls.
 
@@ -181,12 +182,12 @@ Objects in another room carry that room's name, since several share a name (Bed,
 
 ## Adding or fixing zones
 
-Zones live in `llm/src/houses.ts` (`zones` on the house): rooms and doorways use `boxes: [area(x0, x1, z0, z1)]`, objects use `target: [obj(x0, x1, z0, z1, bottom, top)]`.
+Zones live with each house: `llm/src/houses.ts` (House 3) and `llm/src/multi-story-house.ts`. House 3 is one storey: rooms and doorways use `boxes: [area(x0, x1, z0, z1)]`, objects `target: [obj(x0, x1, z0, z1, bottom, top)]`. The Multi-Story House has three: `room(storey, x0, x1, z0, z1)`, `span(yFrom, yTo, …)` for the stairs, and `at(storey, x0, x1, z0, z1, bottom, top)` with heights above that storey's floor.
 1. Get coordinates in the scene's x/z (metres; the camera starts in the dining area facing +z).
 2. Add or edit the zone. A new zone needs an `id`, `name`, `kind` and, for an object, `parentId`; a new room may need `opensTo`.
 3. For a new object, add a document section tagged with its zone ID, so "this" questions have something to answer from.
 
-The zone-authoring tools used to map House 3 aren't in the customer build. They were an on-screen camera readout (position, heading, pitch), a walkthrough logger exporting a `.txt`, and a debug strip showing what the model received. They're in git history at commit `e061e9e`, and the original log is in `docs/zone-logs/`.
+**Walkthrough logger** (dev server only, never in a production build): `components/tour/WalkLogger.tsx` on the house page logs position, floor, heading, pitch and a description ("`<thing> in <room>`"; centres and doorways by position) and exports a `.txt`. It opens by itself while a house has rooms without boxes; `?log` opens it on any house. Each log is replayed against the scene's collision voxels: level rays from centres and doorways find the walls (room boxes), and each object line's 3D view ray finds what it hit (object boxes). The logs are in `docs/zone-logs/`. The debug strip showing what the model received is still only in git history (`e061e9e`).
 
 ## Listing content (House 3)
 

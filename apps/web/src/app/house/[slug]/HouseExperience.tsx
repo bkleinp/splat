@@ -19,7 +19,7 @@ import { Chat } from "./Chat";
  * it stays mounted so the conversation is kept.
  */
 /** Dev-only walkthrough logger: whether to log floors, and whether to open it straight away. */
-export type LoggerSetup = { floors: boolean; upperFloorFrom?: number; unmapped: boolean };
+export type LoggerSetup = { floorStarts: number[]; unmapped: boolean };
 
 export function HouseExperience({
   houseSlug,
@@ -75,8 +75,7 @@ export function HouseExperience({
         <WalkLogger
           viewer={viewer}
           houseSlug={houseSlug}
-          floors={logger.floors}
-          upperFloorFrom={logger.upperFloorFrom}
+          floorStarts={logger.floorStarts}
           defaultOpen={logger.unmapped || logParam}
           onTyping={onTyping}
         />
@@ -89,6 +88,7 @@ export function HouseExperience({
           sources={sources}
           getPose={getPose}
           onTyping={onTyping}
+          showLocation={logger !== null}
           onClose={() => {
             onTyping(false);
             setChatOpen(false);

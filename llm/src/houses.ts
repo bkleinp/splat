@@ -165,11 +165,14 @@ const house3: House = {
     { id: "storage-closet", name: "Storage closet", kind: "feature", parentId: "living-room", aliases: ["closet", "storage"], target: [obj(-2.8, -1.6, -0.95, -0.4, 0, 2.4)] },
 
     { id: "primary-bed", name: "Bed", kind: "feature", parentId: "primary-bedroom", aliases: ["bed"], target: [obj(2.4, 4.6, 1.0, 3.05, 0, 0.75)] },
-    // TV standing on a dresser. Voxels: dresser x 1.45-1.8 up to ~0.75 m; the TV is a thin
-    // slab at the wall side (x ~1.45-1.5) from ~0.8 m. Keeping the TV box thin is what lets
-    // a downward look land on the dresser top in front of it.
-    { id: "primary-tv", name: "TV", kind: "feature", parentId: "primary-bedroom", aliases: ["television"], target: [obj(1.3, 1.55, 1.3, 2.7, 0.78, 2.2)] },
-    { id: "primary-dresser", name: "Dresser", kind: "feature", parentId: "primary-bedroom", aliases: ["drawers", "chest of drawers"], target: [obj(1.3, 1.9, 1.3, 2.7, 0, 0.78)] },
+    // TV standing on a dresser. Voxels: dresser x 1.5-1.85, z 1.5-2.6, top ~0.5-0.7 m; the TV
+    // is a thin panel at the wall side, screen face at x ~1.55, z ~1.5-2.55, from the dresser
+    // top up past 1.6 m (where the collision data stops). The box sits a little proud of the
+    // screen (x 1.62) and starts at the dresser top, so looks from the foot of the bed at
+    // -15° to -40° (logged at -20/-23/-26°) land on the TV; only a steep look down from right
+    // in front reaches the dresser top.
+    { id: "primary-tv", name: "TV", kind: "feature", parentId: "primary-bedroom", aliases: ["television"], target: [obj(1.3, 1.62, 1.4, 2.65, 0.7, 2.2)] },
+    { id: "primary-dresser", name: "Dresser", kind: "feature", parentId: "primary-bedroom", aliases: ["drawers", "chest of drawers"], target: [obj(1.3, 1.9, 1.4, 2.65, 0, 0.7)] },
     { id: "primary-nightstand", name: "Nightstand", kind: "feature", parentId: "primary-bedroom", aliases: ["bedside table"], target: [obj(4.1, 4.7, 0.3, 0.9, 0, 0.65)] },
     { id: "primary-balcony-door", name: "Balcony door", kind: "feature", parentId: "primary-bedroom", aliases: ["windows", "balcony"], target: [obj(1.25, 4.75, 3.8, 4.05, 0, 2.6)] },
     { id: "primary-closet", name: "Closet", kind: "feature", parentId: "primary-bedroom", aliases: ["walk-in closet", "wardrobe", "shelving"], target: [obj(1.25, 2.2, -2.8, -0.4, 0, 2.4)] },
@@ -187,10 +190,13 @@ const house3: House = {
     // 0.75 m high: a level look passes over it to the closet behind; looking down lands on it.
     { id: "bedroom-2-bed", name: "Bed", kind: "feature", parentId: "bedroom-2", aliases: ["bed"], target: [obj(-5.05, -3.05, 1.75, 3.5, 0, 0.75)] },
     // TV above a dresser, logged from the same spot looking up vs down.
-    // Voxels: dresser x -2.2..-1.95 up to ~0.6-0.85 m; the TV itself isn't in the collision data,
-    // so it's a thin slab on the wall behind the dresser (x -1.95..-1.7).
-    { id: "bedroom-2-tv", name: "TV", kind: "feature", parentId: "bedroom-2", aliases: ["television"], target: [obj(-1.95, -1.7, 1.7, 3.4, 0.85, 2.2)] },
-    { id: "bedroom-2-dresser", name: "Dresser", kind: "feature", parentId: "bedroom-2", aliases: ["drawers", "chest of drawers"], target: [obj(-2.25, -1.7, 1.7, 3.4, 0, 0.85)] },
+    // Voxels: dresser x -2.2..-1.95, z 1.9..3.4, top ~0.5-0.8 m; wall face at x ~-1.9. The TV
+    // itself isn't in the collision data (it stops at 1.6 m), so its box is a slab on the wall
+    // above the dresser, sitting a little proud of the wall (x -2.05) and starting at the
+    // dresser top, like the primary bedroom's: level-to-moderately-down looks from the foot of
+    // the bed land on the TV; looking well down lands on the dresser.
+    { id: "bedroom-2-tv", name: "TV", kind: "feature", parentId: "bedroom-2", aliases: ["television"], target: [obj(-2.05, -1.7, 1.65, 3.45, 0.8, 2.2)] },
+    { id: "bedroom-2-dresser", name: "Dresser", kind: "feature", parentId: "bedroom-2", aliases: ["drawers", "chest of drawers"], target: [obj(-2.25, -1.7, 1.7, 3.4, 0, 0.8)] },
     { id: "bedroom-2-nightstand", name: "Nightstand", kind: "feature", parentId: "bedroom-2", aliases: ["bedside table"], target: [obj(-5.2, -4.75, 1.3, 1.85, 0, 0.65)] },
     // The wardrobe strip on the north wall, behind the bed: a level look over the bed reaches it.
     { id: "bedroom-2-closet", name: "Closet", kind: "feature", parentId: "bedroom-2", aliases: ["wardrobe"], target: [obj(-5.2, -3.4, 0.75, 1.2, 0, 2.4)] },

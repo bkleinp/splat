@@ -598,3 +598,13 @@ a { color: inherit; }
 .walk-logger button:disabled { opacity: 0.4; cursor: default; }
 .walk-logger .walk-logger-close { position: absolute; top: 6px; right: 6px; border: none; padding: 0 6px; font-size: 1rem; }
 .walk-logger-open { border: none; border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+
+/* Dev only: the location context the model got for the last question (Chat's LocationReadout). */
+.chat-context {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--chip-bg);
+  font: 0.75rem/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+.chat-context b { font-weight: 600; }

@@ -65,8 +65,9 @@ const onStorey = (b: Box, [, y]: Vec3) => y >= b.min[1] && y <= b.max[1];
 /** Floor area (x/z) of a box. */
 const footprint = (b: Box) => (b.max[0] - b.min[0]) * (b.max[2] - b.min[2]);
 
-/** Horizontal gap between two boxes' footprints (0 if they touch or overlap). */
+/** Horizontal gap between two boxes' footprints (0 if they touch or overlap); Infinity on different storeys. */
 function boxGap(a: Box, b: Box): number {
+  if (a.min[1] >= b.max[1] || b.min[1] >= a.max[1]) return Infinity;
   const dx = Math.max(a.min[0] - b.max[0], 0, b.min[0] - a.max[0]);
   const dz = Math.max(a.min[2] - b.max[2], 0, b.min[2] - a.max[2]);
   return Math.hypot(dx, dz);
@@ -202,6 +203,11 @@ export function resolvePose(house: House, pose: Pose | undefined): ResolvedLocat
     return { ...UNKNOWN, primaryZone: ref(floor), ancestorZones: ancestorsOf(floor, byId), confidence: 0.6, resolution: "inside-zone" };
   }
   const entrance = smallestContaining(house.zones.filter((z) => z.kind === "entrance"), position);
+  if (entrance && resolution === "near-zone") {
+    // Standing in a doorway box is a definite place, even where it pokes past the room boxes.
+    resolution = "inside-zone";
+    confidence = 0.9;
+  }
   const primary = entrance ?? room;
   const ancestorZones = ancestorsOf(primary, byId);
 

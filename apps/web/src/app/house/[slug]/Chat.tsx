@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 // Type-only: importing values from "@splat/llm" here would bundle the listing context into the client.
-import type { Pose } from "@splat/llm/spatial";
+import type { Pose, ResolvedLocation } from "@splat/llm/spatial";
 
 type Turn = {
   role: "user" | "assistant";
@@ -11,9 +11,9 @@ type Turn = {
   pose?: Pose;
 };
 
-// "location" (where the server placed the question) is sent first; the answer doesn't need it client-side.
+// "location" (where the server placed the question) is sent first; only the dev readout uses it.
 type StreamEvent =
-  | { type: "location" }
+  | { type: "location"; location: ResolvedLocation }
   | { type: "text"; text: string }
   | { type: "replace"; text: string }
   | { type: "done" }
@@ -80,6 +80,66 @@ async function readEvents(body: ReadableStream<Uint8Array>, onEvent: (event: Str
   }
 }
 
+const deg = (rad: number) => `${Math.round((rad * 180) / Math.PI)}°`;
+
+/**
+ * Dev-only testing aid above the question box: where the last question was asked from, as the
+ * server resolved it, i.e. the location context the model was given.
+ */
+function LocationReadout({ context }: { context: { pose: Pose; location: ResolvedLocation } | null }) {
+  if (!context) {
+    return (
+      <div className="chat-context">
+        <div>
+          <b>Position:</b> – <span className="muted">(ask a question)</span>
+        </div>
+        <div>
+          <b>Facing:</b> –
+        </div>
+      </div>
+    );
+  }
+  const { pose, location } = context;
+  const [x, y, z] = pose.position;
+  const [fx, fy, fz] = pose.forward ?? [0, 0, 1];
+  const named = (o: { zone: { name: string }; room?: string; inRoom: boolean }) =>
+    o.inRoom || !o.room ? o.zone.name : `${o.zone.name} (${o.room})`;
+  const place = location.primaryZone
+    ? [location.primaryZone.name, ...location.ancestorZones.map((a) => a.name)].join(" · ") +
+      (location.resolution === "near-zone" ? " (near)" : "")
+    : "unknown";
+  const [first, ...rest] = location.rayHits;
+  return (
+    <div className="chat-context">
+      <div>
+        <b>Position:</b> {place} <span className="muted">· confidence {location.confidence}</span>
+      </div>
+      <div className="muted">
+        x {x.toFixed(2)}, y {y.toFixed(2)}, z {z.toFixed(2)} · heading {deg(Math.atan2(fx, fz))}, pitch{" "}
+        {deg(Math.atan2(fy, Math.hypot(fx, fz)))}
+      </div>
+      <div>
+        <b>Facing:</b>{" "}
+        {first ? (
+          <>
+            {named(first)} <span className="muted">{first.metres.toFixed(1)} m</span>
+            {rest.length > 0 && (
+              <span className="muted"> · then {rest.map((h) => `${named(h)} ${h.metres.toFixed(1)} m`).join(", ")}</span>
+            )}
+          </>
+        ) : (
+          <span className="muted">nothing on the line of sight</span>
+        )}
+      </div>
+      {location.nearbyObjects.length > 0 && (
+        <div className="muted">
+          <b>Around:</b> {location.nearbyObjects.map((o) => `${named(o)} ${o.metres.toFixed(1)} m ${o.bearing}`).join(", ")}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Chat({
   houseSlug,
   houseTitle,
@@ -87,6 +147,7 @@ export function Chat({
   getPose,
   onTyping,
   onClose,
+  showLocation = false,
 }: {
   houseSlug: string;
   houseTitle: string;
@@ -97,7 +158,10 @@ export function Chat({
   onTyping?: (typing: boolean) => void;
   /** When set, the header shows a button to hide the chat. */
   onClose?: () => void;
+  /** Dev only: show the Position / Facing readout for the last question. */
+  showLocation?: boolean;
 }) {
+  const [lastContext, setLastContext] = useState<{ pose: Pose; location: ResolvedLocation } | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
@@ -136,6 +200,12 @@ export function Chat({
 
       let answer = "";
       await readEvents(res.body, (event) => {
+        if (event.type === "location") {
+          const sentPose = asked.pose;
+          if (sentPose) setLastContext({ pose: sentPose, location: event.location });
+          else setLastContext(null);
+          return;
+        }
         if (event.type === "text") answer += event.text;
         else if (event.type === "replace") answer = event.text;
         else if (event.type === "error") throw new Error(event.error);
@@ -203,6 +273,8 @@ export function Chat({
         {pending && turns[turns.length - 1]?.role === "user" && <div className="bubble assistant muted">Thinking…</div>}
         {error && <div className="chat-error">{error}</div>}
       </div>
+
+      {showLocation && getPose && <LocationReadout context={lastContext} />}
 
       <form
         className="chat-input"

@@ -13,7 +13,7 @@ import { heading, pitch, readPose } from "./camera";
 
 const SAMPLE_MS = 100;
 
-type Floor = 1 | 2;
+type Floor = number;
 
 /** One logged spot. */
 type LogEntry = {
@@ -22,7 +22,8 @@ type LogEntry = {
   z: number;
   floor?: Floor;
   heading: number;
-  pitch: number;
+  /** Missing on entries saved by the first logger, before pitch was logged. */
+  pitch?: number;
   axis: string;
   note: string;
   at: string;
@@ -40,7 +41,8 @@ function axisLabel(pose: Pose): string {
 }
 
 const fmt = (n: number) => n.toFixed(2);
-const floorName = (f: Floor) => (f === 1 ? "ground" : "upstairs");
+const pitchText = (p: number | undefined, unit: string) => (typeof p === "number" ? `${p.toFixed(0)}${unit}` : "?");
+const floorName = (f: Floor) => (f === 1 ? "ground" : f === 2 ? "second" : f === 3 ? "third" : `${f}th`);
 
 // The log survives refreshes in this browser; storage being unavailable (private window,
 // blocked) just means it lives in memory.
@@ -48,7 +50,11 @@ const storageKey = (houseSlug: string) => `splat:coord-log:${houseSlug}`;
 function loadLog(houseSlug: string): LogEntry[] {
   try {
     const raw = localStorage.getItem(storageKey(houseSlug));
-    return raw ? (JSON.parse(raw) as LogEntry[]) : [];
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    // Saved by any version of the logger: keep entries that have a position and a heading.
+    return Array.isArray(parsed)
+      ? (parsed as LogEntry[]).filter((e) => [e?.x, e?.z, e?.heading].every((n) => typeof n === "number"))
+      : [];
   } catch {
     return [];
   }
@@ -61,19 +67,19 @@ function saveLog(houseSlug: string, log: LogEntry[]) {
   }
 }
 
-function logToText(houseSlug: string, log: LogEntry[], floors: boolean): string {
+function logToText(houseSlug: string, log: LogEntry[], floors: number): string {
   const lines = [
     `# Coordinate log: ${houseSlug}`,
     `# Exported ${new Date().toISOString()}`,
     "# Scene metres; y is the camera (eye) height. Heading: 0 = facing +z, 90 = +x, 180 = -z, -90 = -x.",
     "# Pitch: camera tilt, positive = looking up, negative = looking down.",
-    ...(floors ? ["# Floor: 1 = ground floor, 2 = upstairs (as set in the logger)."] : []),
+    ...(floors > 1 ? [`# Floor: 1 = ground floor, up to ${floors} (as set in the logger).`] : []),
     "",
   ];
   log.forEach((e, i) => {
     const pos = `x=${fmt(e.x)} y=${fmt(e.y)} z=${fmt(e.z)}`;
-    const floor = floors && e.floor ? `  floor=${e.floor}` : "";
-    const facing = `heading=${e.heading.toFixed(0)}deg pitch=${e.pitch.toFixed(0)}deg (${e.axis || "level"})`;
+    const floor = floors > 1 && e.floor ? `  floor=${e.floor}` : "";
+    const facing = `heading=${e.heading.toFixed(0)}deg pitch=${pitchText(e.pitch, "deg")} (${e.axis || "level"})`;
     lines.push(`${String(i + 1).padStart(3)}. ${pos}${floor}  ${facing}  | ${e.note || "(no description)"}  [${e.at}]`);
   });
   return lines.join("\n") + "\n";
@@ -82,17 +88,14 @@ function logToText(houseSlug: string, log: LogEntry[], floors: boolean): string 
 export function WalkLogger({
   viewer,
   houseSlug,
-  floors,
-  upperFloorFrom,
+  floorStarts,
   defaultOpen,
   onTyping,
 }: {
   viewer: ViewerHandle | null;
   houseSlug: string;
-  /** Multi-storey home: log which floor each spot is on. */
-  floors: boolean;
-  /** Camera height where the upper floor starts, for the "looks like" hint. */
-  upperFloorFrom?: number;
+  /** Camera height (y) where each floor starts, lowest first; more than one = log the floor. */
+  floorStarts: number[];
   defaultOpen: boolean;
   /** Fires when the description box gains/loses focus, so the viewer's WASD can be paused. */
   onTyping?: (typing: boolean) => void;
@@ -100,6 +103,7 @@ export function WalkLogger({
   const [pose, setPose] = useState<Pose | null>(null);
   const [open, setOpen] = useState(defaultOpen);
   const [note, setNote] = useState("");
+  const floors = floorStarts.length;
   const [floor, setFloor] = useState<Floor>(1);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -139,7 +143,7 @@ export function WalkLogger({
         x,
         y,
         z,
-        ...(floors ? { floor } : {}),
+        ...(floors > 1 ? { floor } : {}),
         heading: heading(now),
         pitch: pitch(now),
         axis: axisLabel(now),
@@ -162,7 +166,8 @@ export function WalkLogger({
 
   const deg = pose ? heading(pose) : 0;
   const tilt = pose ? pitch(pose) : 0;
-  const guess: Floor | null = pose && upperFloorFrom !== undefined ? (pose.position[1] >= upperFloorFrom ? 2 : 1) : null;
+  // the floor whose camera range the current height is in (on the stairs it's a guess)
+  const guess: Floor | null = pose && floors > 1 ? floorStarts.filter((y) => pose.position[1] >= y).length || 1 : null;
 
   return (
     <div className="walk-logger">
@@ -194,10 +199,10 @@ export function WalkLogger({
             </div>
           </div>
 
-          {floors && (
+          {floors > 1 && (
             <div className="walk-logger-floor" role="group" aria-label="Floor">
               <span>Floor</span>
-              {([1, 2] as const).map((f) => (
+              {Array.from({ length: floors }, (_, i) => i + 1).map((f) => (
                 <button key={f} type="button" aria-pressed={floor === f} onClick={() => setFloor(f)}>
                   {f} · {floorName(f)}
                 </button>
@@ -258,7 +263,7 @@ export function WalkLogger({
               {log.slice(-3).map((e, i) => (
                 <li key={`${log.length}-${i}`}>
                   {fmt(e.x)}, {fmt(e.z)}
-                  {e.floor ? ` · F${e.floor}` : ""} · {e.heading.toFixed(0)}° / {e.pitch.toFixed(0)}° · {e.note || "(no description)"}
+                  {e.floor ? ` · F${e.floor}` : ""} · {e.heading.toFixed(0)}° / {pitchText(e.pitch, "°")} · {e.note || "(no description)"}
                 </li>
               ))}
             </ol>

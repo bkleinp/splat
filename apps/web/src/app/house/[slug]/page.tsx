@@ -20,11 +20,12 @@ export default async function HousePage({ params }: { params: Promise<{ slug: st
   // It opens by itself while some rooms have no boxes yet; ?log opens it on any home.
   let logger: LoggerSetup | null = null;
   if (process.env.NODE_ENV !== "production") {
-    const floors = house.zones.filter((z) => z.kind === "floor" && z.boxes?.length);
-    const upper = floors.map((z) => z.boxes![0].min[1]).sort((a, b) => a - b)[1];
+    const floorStarts = house.zones
+      .filter((z) => z.kind === "floor" && z.boxes?.length)
+      .map((z) => z.boxes![0].min[1])
+      .sort((a, b) => a - b);
     logger = {
-      floors: floors.length > 1,
-      upperFloorFrom: upper,
+      floorStarts,
       unmapped: house.zones.some((z) => z.kind === "room" && !z.boxes?.length),
     };
   }
