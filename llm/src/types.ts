@@ -1,6 +1,7 @@
 // Shapes mirror the blueprint's data model (listing_facts, source_documents,
 // document_chunks, spatial_zones) so swapping seed data for Postgres later is
 // a loader change.
+// Pure types only: the web client imports these with `import type`.
 
 export type SourceKind =
   | "realtor_upload"
@@ -33,36 +34,37 @@ export type SourceDocument = {
   sections: DocumentSection[];
 };
 
-export type ZoneKind = "property" | "floor" | "room" | "feature" | "appliance" | "outdoor_area";
+export type ZoneKind = "property" | "floor" | "room" | "feature" | "appliance" | "entrance" | "outdoor_area";
 
-/** A named area of the home (blueprint: spatial_zones), minus the bounding box for now. */
+export type Vec3 = [number, number, number];
+
+/** Axis-aligned box in the viewer's world coordinates (metres, y up). */
+export type Box = { min: Vec3; max: Vec3 };
+
+/** A named area of the home (blueprint: spatial_zones). */
 export type Zone = {
   id: string;
   name: string;
   kind: ZoneKind;
-  /** Containing zone: feature → room → floor. */
+  /** Containing zone: feature/appliance/entrance → room → property. */
   parentId?: string;
   aliases?: string[];
-};
-
-/**
- * A place the visitor can look from. Today: one photo in the slideshow.
- * Later: the 3D viewer's camera pose resolved against zone bounding boxes.
- * Either way, the app (not the model) decides where the visitor is.
- */
-export type HouseView = {
-  id: string;
-  /** Short label shown to the visitor, e.g. "Kitchen". */
-  label: string;
-  /** Path under apps/web/public. */
-  src: string;
-  alt: string;
-  /** Attribution, when the image license requires one. */
-  credit?: string;
-  /** The zone the visitor is standing in for this view. */
-  zoneId: string;
-  /** Other zones clearly in view from here (blueprint: nearbyZones). */
-  visibleZoneIds: string[];
+  /**
+   * Where you stand to be in this zone: a room's floor area, or a doorway for
+   * an entrance. Several boxes make an L-shape.
+   */
+  boxes?: Box[];
+  /**
+   * Features and appliances: the object itself. The camera's view ray is cast
+   * against these, and the first one it hits is what the visitor is facing.
+   */
+  target?: Box[];
+  /**
+   * Rooms only: other rooms you can see into from here (open plan, a
+   * doorway). Stands in for line-of-sight, so features behind a wall are
+   * never "in view". Symmetric: listing it on one side is enough.
+   */
+  opensTo?: string[];
 };
 
 /** A 3D Gaussian-splat tour, rendered by the viewer in engine/supersplat-viewer. */
@@ -87,10 +89,8 @@ export type House = {
   region: string;
   summary: string;
   zones: Zone[];
-  /** When set, the house page shows this 3D tour instead of the photo slideshow. */
+  /** The 3D tour. Zone boxes are in this scene's world coordinates. */
   scene?: HouseScene;
-  /** Slideshow order; the first view is where a visit starts. Empty for scene-only houses. */
-  views: HouseView[];
   facts: ListingFact[];
   documents: SourceDocument[];
 };

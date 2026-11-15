@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { buildHouseContext, formatLocation, SYSTEM_PROMPT } from "./context";
-import { resolveView, type ResolvedLocation } from "./spatial";
+import { resolvePose, type Pose, type ResolvedLocation } from "./spatial";
 import type { House } from "./types";
 
 // Server-only: reads ANTHROPIC_API_KEY from the environment. Never import from client components.
@@ -14,8 +14,8 @@ const MAX_HISTORY_MESSAGES = 12;
 const REFUSAL_REPLY = "I can't help with that question. You can ask the listing agent directly.";
 const EMPTY_REPLY = "I don't have a verified answer for that. You can ask the listing agent.";
 
-/** `viewId` on user turns: which view the visitor was looking at when they asked. */
-export type ChatTurn = { role: "user" | "assistant"; content: string; viewId?: string };
+/** `pose` on user turns: where the visitor's camera was when they asked. */
+export type ChatTurn = { role: "user" | "assistant"; content: string; pose?: Pose };
 
 /**
  * `location` comes first: where the server resolved the visitor to.
@@ -45,7 +45,7 @@ export async function* streamChatAboutHouse(
 
   // Resolve the latest location every message (blueprint § "Follow-up questions").
   const latest = recent[recent.length - 1];
-  const location = resolveView(house, latest.viewId);
+  const location = resolvePose(house, latest.pose);
   yield { type: "location", location };
 
   // Evidence rides in the system prompt so it isn't repeated in history; it's
@@ -55,7 +55,7 @@ export async function* streamChatAboutHouse(
   const messages = recent.map((t, i): Anthropic.MessageParam => {
     if (t.role === "assistant") return { role: "assistant", content: t.content };
     const isLatest = i === recent.length - 1;
-    const where = isLatest ? formatLocation(location) : formatLocation(resolveView(house, t.viewId), { brief: true });
+    const where = isLatest ? formatLocation(location) : formatLocation(resolvePose(house, t.pose), { brief: true });
     return { role: "user", content: `${where}\n\n${t.content}` };
   });
 

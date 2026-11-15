@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { getHouse } from "@splat/llm";
 import { streamChatAboutHouse, type ChatTurn } from "@splat/llm/claude";
+import { parsePose } from "@/lib/pose";
 
 export const runtime = "nodejs";
 
@@ -12,12 +13,13 @@ function parseMessages(value: unknown): ChatTurn[] | null {
   const turns: ChatTurn[] = [];
   for (const m of value) {
     if (typeof m !== "object" || m === null) return null;
-    const { role, content, viewId } = m as Record<string, unknown>;
+    const { role, content, pose } = m as Record<string, unknown>;
     if ((role !== "user" && role !== "assistant") || typeof content !== "string") return null;
     if (content.trim() === "" || content.length > MAX_MESSAGE_CHARS) return null;
-    // An unrecognized viewId isn't an error: it resolves to "location unknown".
-    if (viewId !== undefined && (typeof viewId !== "string" || viewId.length > 64)) return null;
-    turns.push({ role, content, viewId });
+    // A missing pose, or one outside every zone, isn't an error: it resolves to "location unknown".
+    const parsedPose = parsePose(pose);
+    if (parsedPose === null) return null;
+    turns.push({ role, content, pose: parsedPose });
   }
   if (turns[turns.length - 1].role !== "user") return null;
   return turns;

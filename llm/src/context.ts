@@ -9,11 +9,13 @@ import type { DocumentSection, House, SourceDocument } from "./types";
 
 export const SYSTEM_PROMPT = `You're the friendly listing agent's assistant for one home on a real-estate website, chatting with visitors as they tour it online, in 3D or through photos.
 
-Voice: warm, upbeat, and conversational, like a good realtor at an open house who's genuinely excited to show the place off. Talk like a person, not a database: "Great question!", "You'll love this one", and "the island seats four, perfect for gathering around" are the right energy. When it fits, point out a related feature from the evidence they might enjoy, or suggest reaching out to the listing agent to ask questions or book a showing. You can't book, schedule, or contact anyone yourself, so never offer to. Keep it natural; don't oversell, gush in every sentence, or end every answer with the same pitch.
+Voice: warm, upbeat, and conversational, like a good realtor at an open house who's genuinely excited to show the place off. Talk like a person, not a database: "Great question!", "You'll love this one", and "the island seats four, perfect for gathering around" are the right energy. When it fits, point out a related feature from the evidence they might enjoy, or suggest reaching out to the listing agent to ask questions or book a showing. You can't book, schedule, or contact anyone yourself, so never offer to. Keep it natural; don't oversell, gush in every sentence, or end every answer with the same pitch. Always talk to the visitor directly ("you're looking at…"), never about them ("the visitor is…").
 
 Where the visitor is:
-- Each visitor message starts with <visitor_location>, saying which area of the home they were looking at when they asked. The app works this out; trust it.
-- Use the location only to understand words like "here", "this room", "these counters", or "that appliance". It tells you where they are, not anything about the home itself.
+- Each visitor message starts with <visitor_location>, saying where in the home they were standing when they asked, worked out from their position in the 3D tour. The app works this out; trust it.
+- Use the location only to understand words like "here", "this room", "these counters", or "that appliance". It tells you where they are, not anything about the home itself. Don't mention where they're standing unless the question is about where they are.
+- "In" is the room they're standing in; "At: Entrance" means they're in that room's doorway (the room is under "Within").
+- "Facing" is the object their view lands on: it's what "this" or "that" most likely means. "Nearest object" means they aren't looking at anything in particular, so it's only a hint: use it for "this" if the question fits it, otherwise answer about the room.
 - For "this room"-style questions, answer from the evidence under "Where the visitor is now". If that evidence doesn't cover it, say so rather than borrowing facts from another room.
 - If they ask about another part of the home, or the whole home, just answer it. Never imply they're somewhere they're not.
 - Always go by the location on their latest message; earlier messages may have been asked from other rooms.
@@ -36,11 +38,14 @@ export function sourceLabels(house: House): string[] {
 
 type RankedSection = { doc: SourceDocument; section: DocumentSection; score: number };
 
+// The source label goes at the end of the text, the same shape as the facts
+// lines, because that's the pattern the model copies when citing. A label in
+// the heading got merged with the heading into one bogus citation.
 function formatSection(house: House, { doc, section }: RankedSection): string {
   const zoneNames = section.zones.map((id) => house.zones.find((z) => z.id === id)?.name ?? id);
-  const page = section.pageNumber !== undefined ? `, p.${section.pageNumber}` : "";
-  const area = zoneNames.length > 0 ? ` | area: ${zoneNames.join(", ")}` : " | area: whole home";
-  return `### ${section.title} | source: [${doc.title}]${page}${area}\n${section.content}`;
+  const area = zoneNames.length > 0 ? zoneNames.join(", ") : "whole home";
+  const page = section.pageNumber !== undefined ? `, page ${section.pageNumber}` : "";
+  return `### ${section.title} (about: ${area}${page})\n${section.content} [${doc.title}]`;
 }
 
 export function buildHouseContext(house: House, location: ResolvedLocation): string {
@@ -91,12 +96,23 @@ export function formatLocation(location: ResolvedLocation, { brief = false } = {
   if (!location.primaryZone) {
     return "<visitor_location>Unknown. Don't assume they're in any particular room; answer about the whole home.</visitor_location>";
   }
+  const { primaryZone, ancestorZones, facingZone, facingBy, nearbyZones, resolution } = location;
+  const where = resolution === "near-zone" ? "Near" : primaryZone.kind === "entrance" ? "At" : "In";
   if (brief) {
-    return `<visitor_location>Was viewing: ${location.primaryZone.name}</visitor_location>`;
+    const within = ancestorZones[0] ? ` (${ancestorZones[0].name})` : "";
+    const facing = facingZone && facingBy === "ray" ? `, facing ${facingZone.name}` : "";
+    return `<visitor_location>Was ${where.toLowerCase()}: ${primaryZone.name}${within}${facing}</visitor_location>`;
   }
-  const lines = [`Currently viewing: ${location.primaryZone.name} (${location.primaryZone.kind.replace("_", " ")})`];
-  if (location.ancestorZones.length > 0) lines.push(`Within: ${location.ancestorZones.map((z) => z.name).join(" > ")}`);
-  if (location.nearbyZones.length > 0) lines.push(`Also in view: ${location.nearbyZones.map((z) => z.name).join(", ")}`);
+  const lines = [`${where}: ${primaryZone.name} (${primaryZone.kind.replace("_", " ")})`];
+  if (ancestorZones.length > 0) lines.push(`Within: ${ancestorZones.map((z) => z.name).join(" > ")}`);
+  if (facingZone) {
+    lines.push(
+      facingBy === "nearest"
+        ? `Nearest object (not looking at anything in particular): ${facingZone.name}`
+        : `Facing: ${facingZone.name}`,
+    );
+  }
+  if (nearbyZones.length > 0) lines.push(`Also in view: ${nearbyZones.map((z) => z.name).join(", ")}`);
   lines.push(`Location confidence: ${location.confidence >= 0.8 ? "high" : location.confidence >= 0.5 ? "medium" : "low"}`);
   return `<visitor_location>\n${lines.join("\n")}\n</visitor_location>`;
 }
