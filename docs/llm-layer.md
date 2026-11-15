@@ -187,7 +187,7 @@ Zones live with each house: `llm/src/houses.ts` (House 3) and `llm/src/multi-sto
 2. Add or edit the zone. A new zone needs an `id`, `name`, `kind` and, for an object, `parentId`; a new room may need `opensTo`.
 3. For a new object, add a document section tagged with its zone ID, so "this" questions have something to answer from.
 
-**Walkthrough logger** (dev server only, never in a production build): `components/tour/WalkLogger.tsx` on the house page logs position, floor, heading, pitch and a description ("`<thing> in <room>`"; centres and doorways by position) and exports a `.txt`. It opens by itself while a house has rooms without boxes; `?log` opens it on any house. Each log is replayed against the scene's collision voxels: level rays from centres and doorways find the walls (room boxes), and each object line's 3D view ray finds what it hit (object boxes). The logs are in `docs/zone-logs/`. The debug strip showing what the model received is still only in git history (`e061e9e`).
+**Walkthrough logger** (dev server only, never in a production build): `components/tour/WalkLogger.tsx`, on each home's settings page (`/<slug>/admin`), logs position, floor, heading, pitch and a description ("`<thing> in <room>`"; centres and doorways by position) and exports a `.txt`. The settings page also has the chat with a **Position / Facing** readout above the question box: the room and floor, the line-of-sight hits and the nearby objects the last question was answered with. The customer page (`/<slug>`) has neither. Each log is replayed against the scene's collision voxels: level rays from centres and doorways find the walls (room boxes), and each object line's 3D view ray finds what it hit (object boxes). The logs are in `docs/zone-logs/`.
 
 ## Listing content (House 3)
 
@@ -199,7 +199,10 @@ All fictional. Each document is a source the model cites (chips in the chat), an
 | Realtor amenities form | Room-by-room and object-by-object descriptions, a staging note (furniture isn't included), the layout. |
 | **Floor plan & dimensions** | Room sizes and object sizes, from the zone boxes, so they match the 3D scene. Examples: kitchen 12′6″ × 8′8″, primary bedroom 11′6″ × 12′8″ (fits a king), 60″ double vanity, 60 × 36″ shower. |
 | **Appliance & fixture schedule** | Makes and product lines: Bosch Benchmark and Miele 30″ induction cooktops, a Bosch 800 Series wall oven and dishwasher, a Kraus sink, a Kohler faucet, Hansgrohe/Kohler/TOTO/Grohe bath fixtures, Lutron shades, a Carrier heat pump. **Product-line names only, no SKUs or model numbers**, so no invented specs get pinned on a real product. |
+| **Measurements & inventory** | One section per object zone (every object you can look at in the tour), tagged with that zone: make and product line, size, materials, and whether it's included (staging isn't). Examples: a Samsung The Frame 65″ TV (57 × 33″) in the living room, an LG 50″ on the primary dresser, the walk-in closet's 18 ft of rod. Both houses have one (`h3-measurements`, `msh-measurements`); same no-model-numbers rule. |
 | HOA documents, seller disclosure, neighborhood guide | Fees and rules, systems and warranty, nearby distances. |
+
+**Voice** (`SYSTEM_PROMPT`): a relaxed, friendly agent who answers first, in one or two sentences, with only the specifics that answer the question. No openers ("Great question!"), no restating, no wrap-up pitch; the listing agent comes up only when the evidence doesn't cover something.
 
 ## Citations, streaming and context switching
 

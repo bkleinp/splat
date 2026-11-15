@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ViewerHandle } from "@playcanvas/supersplat-viewer/viewer";
 import type { Pose } from "@splat/llm/spatial";
+import { useMounted } from "@/lib/useMounted";
 import { heading, pitch, readPose } from "./camera";
 
 // Dev-only zone-authoring aid (restored from e061e9e, plus a floor for multi-storey homes): a live
@@ -100,6 +101,7 @@ export function WalkLogger({
   /** Fires when the description box gains/loses focus, so the viewer's WASD can be paused. */
   onTyping?: (typing: boolean) => void;
 }) {
+  const mounted = useMounted();
   const [pose, setPose] = useState<Pose | null>(null);
   const [open, setOpen] = useState(defaultOpen);
   const [note, setNote] = useState("");
@@ -118,6 +120,9 @@ export function WalkLogger({
     }, SAMPLE_MS);
     return () => clearInterval(timer);
   }, [viewer, open]);
+
+  // Browser-only (see useMounted): keeps autofill attributes from tripping hydration.
+  if (!mounted) return null;
 
   if (!open) {
     return (
