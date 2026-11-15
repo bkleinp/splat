@@ -9,7 +9,9 @@
   /* Floating panels over the 3D tour. */
   --overlay: rgba(12, 10, 9, 0.62);
   --overlay-text: #fafaf9;
-  --chat-width: 380px;
+  --chat-width: 360px;
+  --pill-width: min(380px, calc(100% - 32px));
+  --chat-panel-width: min(420px, calc(100% - 32px));
 }
 
 @media (prefers-color-scheme: dark) {
@@ -119,7 +121,7 @@ a { color: inherit; }
 .scene-error { color: #fca5a5; padding: 24px; text-align: center; }
 
 /* Glass pill shared by the title, hint and chat button. */
-.tour-header, .scene-hint, .tour-chat-open {
+.tour-header, .scene-hint {
   background: var(--overlay);
   color: var(--overlay-text);
   backdrop-filter: blur(10px);
@@ -142,7 +144,8 @@ a { color: inherit; }
 .scene-bottom {
   position: absolute;
   left: 16px;
-  right: calc(var(--chat-width) + 32px);
+  /* stops short of the chat pill on the right */
+  right: calc(var(--pill-width) + 32px);
   bottom: 16px;
   display: flex;
   flex-direction: column;
@@ -150,13 +153,12 @@ a { color: inherit; }
   gap: 6px;
   pointer-events: none;
 }
-.tour:has(.tour-chat[hidden]) .scene-bottom { right: 16px; }
 
 /* "Press F to sit" / "Stand up": centred over the scene, above the bottom strip. */
 .seat-prompt {
   position: absolute;
-  bottom: 64px;
-  left: calc((100% - var(--chat-width) - 32px) / 2);
+  bottom: 84px;
+  left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
@@ -187,7 +189,8 @@ a { color: inherit; }
   font-size: 0.85rem;
 }
 .seat-prompt:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-.tour:has(.tour-chat[hidden]) .seat-prompt, .admin-stage .seat-prompt { left: 50%; }
+.tour:has(.tour-chat:not([hidden])) .scene-bottom { right: calc(var(--chat-panel-width) + 32px); }
+.admin-stage .seat-prompt { bottom: 64px; }
 @keyframes seat-prompt-in { from { opacity: 0; transform: translate(-50%, 6px); } }
 @media (prefers-reduced-motion: reduce) { .seat-prompt { animation: none; } }
 
@@ -296,7 +299,16 @@ a { color: inherit; }
 .cut input[type="range"]:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
 @media (prefers-reduced-motion: reduce) { .view-switch .thumb { transition: none; } }
 
-.scene-hint { padding: 6px 12px; border-radius: 999px; font-size: 0.78rem; white-space: nowrap; }
+.scene-hint {
+  max-width: 100%;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(12, 10, 9, 0.72);
+  font-size: 0.86rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .scene-credit {
   max-width: 100%;
   padding-left: 4px;
@@ -308,38 +320,140 @@ a { color: inherit; }
   text-overflow: ellipsis;
 }
 
-/* Floating chat, right side. Stays mounted when hidden so the conversation is kept. */
+/* The chat, bottom right, in "liquid glass": closed, a wide see-through pill ("Ask any
+   question…"); open, the pill grows up into a glass panel, tall enough to read comfortably but
+   short of the full height. It stays mounted when closed so the conversation is kept. */
+.tour-chat, .chat-bubble {
+  --chat-line: rgba(255, 255, 255, 0.16);
+  /* the glass edge: a bright rim on top, a faint one below, and a soft shadow under it */
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
 .tour-chat {
+  --chat-glass: linear-gradient(180deg, rgba(44, 42, 46, 0.66), rgba(22, 20, 24, 0.74));
+  --chat-soft: rgba(255, 255, 255, 0.1);
+  --chat-text: #fafaf9;
+  --chat-muted: rgba(250, 250, 249, 0.62);
+  --chat-accent: #2dd4bf;
   position: absolute;
   right: 16px;
   bottom: 16px;
-  width: var(--chat-width);
-  height: min(680px, calc(100dvh - 32px));
+  width: var(--chat-panel-width);
+  height: min(600px, calc(100dvh - 120px));
   display: flex;
+  flex-direction: column;
+  transform-origin: bottom right;
+  animation: chat-open 0.32s cubic-bezier(0.2, 1.2, 0.35, 1);
 }
 .tour-chat[hidden] { display: none; }
-.tour-chat .chat {
-  flex: 1;
-  background: color-mix(in srgb, var(--surface) 90%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-radius: 16px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-}
+@keyframes chat-open { from { opacity: 0; transform: scale(0.85, 0.25); } 40% { opacity: 1; } }
 
-.tour-chat-open {
+.chat-bubble {
   position: absolute;
   right: 16px;
   bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: var(--pill-width);
+  height: 58px;
+  padding: 0 24px;
   border: none;
   border-radius: 999px;
-  padding: 11px 18px;
+  /* mostly clear: a light tint over a strong blur, so the room shows through */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)), rgba(24, 22, 26, 0.32);
+  color: #fff;
+  backdrop-filter: blur(16px) saturate(1.8);
+  -webkit-backdrop-filter: blur(16px) saturate(1.8);
+  box-shadow: var(--glass-edge), 0 8px 28px rgba(0, 0, 0, 0.16);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 1.02rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: text;
+  animation: chat-bubble-in 0.25s ease-out;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
 }
-.tour-chat-open:hover { background: var(--accent); color: #0c0a09; }
+.chat-bubble svg { flex: none; width: 22px; height: 22px; fill: currentColor; opacity: 0.9; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3)); }
+.chat-bubble span { opacity: 0.92; }
+.chat-bubble:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)), rgba(24, 22, 26, 0.42);
+  box-shadow: var(--glass-edge), 0 10px 32px rgba(0, 0, 0, 0.22);
+  transform: scale(1.015);
+}
+.chat-bubble:active { transform: scale(0.99); }
+.chat-bubble:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+@keyframes chat-bubble-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .tour-chat, .chat-bubble { animation: none; transition: none; } }
+
+/* the chat's own look over the tour: dark glass, whatever the page's light/dark theme */
+.tour-chat .chat {
+  flex: 1 1 auto;
+  min-height: 0;
+  background: var(--chat-glass);
+  color: var(--chat-text);
+  border: none;
+  border-radius: 24px;
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow: var(--glass-edge), 0 18px 50px rgba(0, 0, 0, 0.3);
+}
+.tour-chat .muted { color: var(--chat-muted); }
+.tour-chat .chat-header { padding: 16px 52px 14px 20px; border-bottom: 1px solid var(--chat-line); }
+.tour-chat .chat-header strong { font-size: 1rem; }
+.tour-chat .chat-header .small { font-size: 0.78rem; }
+.tour-chat .chat-close { top: 14px; right: 14px; color: var(--chat-muted); }
+.tour-chat .chat-close:hover { background: var(--chat-soft); color: var(--chat-text); }
+.tour-chat .chat-log { padding: 18px 20px 14px; gap: 12px; font-size: 0.93rem; line-height: 1.6; }
+/* before the first question: suggestions wait just above the question box, with room above them */
+.tour-chat .suggestions { margin-top: auto; }
+.tour-chat .suggestions::before { content: "Try asking"; flex-basis: 100%; margin-bottom: 2px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--chat-muted); }
+.tour-chat .bubble { padding: 10px 14px; border-radius: 16px; }
+.tour-chat .bubble.user { background: var(--chat-accent); color: #0c0a09; }
+.tour-chat .bubble.assistant { background: var(--chat-soft); color: var(--chat-text); }
+.tour-chat .chip.source { background: transparent; border-color: var(--chat-line); color: var(--chat-muted); }
+.tour-chat .suggestions { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+.tour-chat .suggestion {
+  padding: 7px 14px;
+  border: 1px solid var(--chat-line);
+  border-radius: 999px;
+  background: var(--chat-soft);
+  color: var(--chat-text);
+  font-size: 0.84rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+.tour-chat .suggestion:hover:not(:disabled) { background: rgba(255, 255, 255, 0.13); border-color: rgba(255, 255, 255, 0.22); }
+.tour-chat .chat-error { color: #fca5a5; }
+.tour-chat .chat-input { position: relative; padding: 12px 14px 14px; border-top: 1px solid var(--chat-line); }
+.tour-chat .chat-input input {
+  padding: 11px 46px 11px 16px;
+  border: 1px solid var(--chat-line);
+  border-radius: 999px;
+  background: var(--chat-soft);
+  color: var(--chat-text);
+}
+.tour-chat .chat-input input::placeholder { color: var(--chat-muted); }
+.tour-chat .chat-input input:focus { outline: none; border-color: rgba(45, 212, 191, 0.6); }
+.tour-chat .chat-input button {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--chat-accent);
+  color: #0c0a09;
+}
+.tour-chat .chat-input button:disabled { opacity: 0.35; }
+.tour-chat .chat-context { background: rgba(0, 0, 0, 0.2); border-top-color: var(--chat-line); }
+
+.chat-close svg, .chat-input button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.chat-close { display: grid; place-items: center; padding: 0; }
 
 /* ---------- Chat panel ---------- */
 
@@ -433,13 +547,14 @@ a { color: inherit; }
   .cut { border-left: 0; border-top: 1px solid var(--glass-line); margin: 0; padding: 2px 8px 0; }
   .cut input[type="range"] { flex: 1; width: auto; }
 
-  .tour-chat { left: 8px; right: 8px; bottom: 8px; width: auto; height: var(--sheet-height); }
+  .tour-chat { right: 8px; bottom: 8px; width: calc(100% - 16px); height: var(--sheet-height); }
+  .tour-chat .chat-log { padding: 14px 16px 10px; }
 
-  .scene-bottom { right: 16px; bottom: calc(var(--sheet-height) + 16px); }
-  .tour:has(.tour-chat[hidden]) .scene-bottom { bottom: 72px; }
+  /* the credit goes above the pill */
+  .scene-bottom { right: 16px; bottom: 84px; }
+  .tour:has(.tour-chat:not([hidden])) .scene-bottom { display: none; }
   .scene-hint { display: none; }
-  .seat-prompt { left: 50%; bottom: calc(var(--sheet-height) + 64px); }
-  .tour:has(.tour-chat[hidden]) .seat-prompt { bottom: 120px; }
+  .seat-prompt { bottom: 112px; }
 }
 
 /* ---------- Dev tools: tour list and settings page (/tours, /<slug>/admin) ---------- */

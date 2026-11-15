@@ -147,6 +147,7 @@ export function Chat({
   getPose,
   onTyping,
   onClose,
+  onPendingChange,
   showLocation = false,
 }: {
   houseSlug: string;
@@ -158,6 +159,8 @@ export function Chat({
   onTyping?: (typing: boolean) => void;
   /** When set, the header shows a button to hide the chat. */
   onClose?: () => void;
+  /** Fires when an answer starts or finishes coming in. */
+  onPendingChange?: (pending: boolean) => void;
   /** Dev only: show the Position / Facing readout for the last question. */
   showLocation?: boolean;
 }) {
@@ -167,6 +170,8 @@ export function Chat({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => onPendingChange?.(pending), [pending, onPendingChange]);
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
@@ -227,8 +232,10 @@ export function Chat({
     <aside className="chat">
       <header className="chat-header">
         {onClose && (
-          <button type="button" className="chat-close" aria-label="Hide chat" onClick={onClose}>
-            ×
+          <button type="button" className="chat-close" aria-label="Minimize chat" title="Minimize (Esc)" onClick={onClose}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
           </button>
         )}
         <strong>Ask about this home</strong>
@@ -288,13 +295,15 @@ export function Chat({
           onChange={(e) => setInput(e.target.value)}
           onFocus={() => onTyping?.(true)}
           onBlur={() => onTyping?.(false)}
-          placeholder="Ask about this home…"
+          placeholder="Ask any question…"
           maxLength={2000}
           disabled={pending}
           aria-label="Your question"
         />
-        <button type="submit" disabled={pending || !input.trim()}>
-          Send
+        <button type="submit" disabled={pending || !input.trim()} aria-label="Send">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 19V5M5 12l7-7 7 7" />
+          </svg>
         </button>
       </form>
     </aside>
