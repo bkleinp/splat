@@ -21,7 +21,8 @@ describe('the /viewer entry', () => {
         // it emitted are real and nothing in the module reaches for the dom at load time.
         const mod = await import('../../dist/viewer.js');
 
-        assert.deepEqual(Object.keys(mod), ['createViewer']);
+        // tour fork: DEFAULT_WALK_SETTINGS and DEFAULT_PLAN_CLEANUP are ours
+        assert.deepEqual(Object.keys(mod).sort(), ['DEFAULT_PLAN_CLEANUP', 'DEFAULT_WALK_SETTINGS', 'createViewer']);
         assert.equal(typeof mod.createViewer, 'function');
     });
 

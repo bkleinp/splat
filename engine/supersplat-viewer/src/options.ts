@@ -63,6 +63,14 @@ type ViewerFlags = {
     reticle?: boolean;
     /** Start with the camera animation paused. */
     noanim?: boolean;
+    /**
+     * Tour fork: walk is the only camera mode. Starts in walk (before collision arrives, on the
+     * starting camera's level), skips the intro animation, and undoes any switch to fly, orbit
+     * or animation.
+     */
+    walkOnly?: boolean;
+    /** Tour fork: walking feel. Unset fields use {@link WalkSettings}' defaults. */
+    walk?: Partial<WalkSettings>;
     /** Disable post effects. */
     nofx?: boolean;
     /** Override the settings' `highPrecisionRendering`. */
@@ -129,6 +137,27 @@ type ViewerFlags = {
     exposeGlobals?: boolean;
 };
 
+/**
+ * Tour fork: how walking feels. Defaults in brackets. Change at runtime with
+ * `ViewerHandle.setWalkSettings`.
+ */
+type WalkSettings = {
+    /** Steady walking speed, meters per second; shift doubles it [1.4]. */
+    speed: number;
+    /** Seconds to get most of the way to full speed, and to slow down after letting go [0.25]. */
+    responseTime: number;
+    /** Head bob strength: 0 off, 1 subtle (about 1.2 cm), 2 double [1]. */
+    headBob: number;
+    /** Meters per step: the bob's rhythm [0.7]. */
+    stepLength: number;
+    /** Eye height above the floor, meters [1.5]. */
+    eyeHeight: number;
+    /** Vertical field of view while walking, degrees [90]. */
+    fov: number;
+    /** How high Space jumps, meters; 0 turns jumping off [0.8, the stock jump]. */
+    jumpHeight: number;
+};
+
 /** Options for `createViewer`. */
 type CreateViewerOptions = ViewerAssets &
     ViewerFlags & {
@@ -149,4 +178,4 @@ type CreateViewerOptions = ViewerAssets &
         contents?: Promise<Response>;
     };
 
-export type { CreateViewerOptions, ViewerAssets, ViewerFlags };
+export type { CreateViewerOptions, ViewerAssets, ViewerFlags, WalkSettings };

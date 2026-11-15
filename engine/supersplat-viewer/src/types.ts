@@ -6,10 +6,11 @@
 import type { Entity, EventHandler, AppBase } from 'playcanvas';
 
 import type { CaptureResult } from './capture';
+import type { PlanCleanup } from './height-cut';
 import type { Localize } from './localization';
-import type { ViewerAssets, ViewerFlags } from './options';
+import type { ViewerAssets, ViewerFlags, WalkSettings } from './options';
 import type { Quality } from './quality';
-import type { Annotation, ExperienceSettings } from './settings';
+import type { Annotation, ExperienceSettings, PostEffectSettings } from './settings';
 
 type CameraMode = 'orbit' | 'anim' | 'fly' | 'walk';
 
@@ -161,6 +162,26 @@ type CaptureOptions = {
     supersample?: number;
 };
 
+/** Tour fork: the plan view's state, from `ViewerHandle.getPlanInfo`. Heights in meters. */
+type PlanInfo = {
+    /** Whether the plan view is showing. */
+    active: boolean;
+    /** World height of the floor cut heights are measured from. */
+    floor: number;
+    /** Height of the top of the scene above that floor: a slider's full range. */
+    height: number;
+    /** The cut, above the floor, being shown or eased toward; null when nothing is cut. */
+    cut: number | null;
+    /** The floor plan's horizontal extent in world space, [minX, minZ, maxX, maxZ]. */
+    bounds: [number, number, number, number];
+    /** The outline set with `setPlanOutline`, or null when the floor is found automatically. */
+    outline: [number, number][] | null;
+    /** The world height set with `setPlanBottom`, or null when nothing under the floor is trimmed. */
+    bottom: number | null;
+    /** The haze cleanup set with `setPlanCleanup`. */
+    cleanup: PlanCleanup;
+};
+
 /** What `createViewer` resolves to: one viewer instance. */
 type ViewerHandle = {
     /** The engine application, for a host that needs to reach past this api. */
@@ -218,6 +239,66 @@ type ViewerHandle = {
      * axes. Independent of `gamingControls`, `inputMode` and the keyboard/gamepad input gate.
      */
     setMoveInput(x: number, z: number): void;
+    /** Tour fork: the current walking feel. */
+    getWalkSettings(): WalkSettings;
+    /**
+     * Tour fork: change how walking feels, immediately (also mid-walk, and before loading
+     * finishes). Unset fields keep their current value; out-of-range values are clamped.
+     */
+    setWalkSettings(settings: Partial<WalkSettings>): void;
+    /**
+     * Tour fork: replace the post effects (sharpness, bloom, grading, vignette, fringing) and
+     * re-render. Turning every effect off removes the post-processing pass entirely.
+     */
+    setPostEffects(postEffects: PostEffectSettings): void;
+    /**
+     * Tour fork: fly up to a top-down view of the current floor, or back down to where the
+     * camera left from. In the plan view the camera orbits: drag to tilt and turn, wheel or pinch
+     * to zoom. Requires `state.loaded`.
+     */
+    setPlanView(on: boolean): void;
+    /**
+     * Tour fork: hide everything higher than `height` meters above the floor (the floor the
+     * plan view was entered from, or under the walker), easing there; null shows everything
+     * again. Requires `state.loaded`.
+     */
+    setCutHeight(height: number | null): void;
+    /** Tour fork: the plan view's state and the scene's height above the floor, for a slider. */
+    getPlanInfo(): PlanInfo;
+    /**
+     * Tour fork: the floor plan's outline, corners as [x, z] in world space (at most 48). While
+     * the walls are cut, everything outside it is hidden, and the plan view frames it. Only the
+     * plan view is affected: walking still shows everything. null (the default) finds the floor
+     * from the walk collision and crops to a box around it; an empty array crops nothing (for
+     * drawing an outline). With `frame` (default true), an open plan view flies to the new
+     * outline. Can be set before loading finishes.
+     */
+    setPlanOutline(points: [number, number][] | null, frame?: boolean): void;
+    /**
+     * Tour fork: in the plan view, hide everything below world height `y` (stray splats and the
+     * backdrop under the floor); null hides nothing. Walking is unaffected. Can be set before
+     * loading finishes. `getPlanInfo().floor` gives the floor's height to measure from.
+     */
+    setPlanBottom(y: number | null): void;
+    /**
+     * Tour fork: how hard the plan view cleans up haze, the faint splats and big soft blobs that
+     * can't be seen at eye height but read as fuzz from above. `haze` hides splats fainter than
+     * that opacity (0-1, default 0.1); along the cuts the bar is 0.3 higher. `maxSize` hides
+     * splats reaching further than that many meters from their centre (null, the default, keeps
+     * all). Unset fields keep their value. Walking is unaffected. Can be set before loading.
+     */
+    setPlanCleanup(cleanup: Partial<PlanCleanup>): void;
+    /**
+     * Tour fork: where a point on the screen (CSS pixels from the canvas's top left) lands on the
+     * floor, as [x, z] in world space; null when it misses. The floor is the plan view's, or the
+     * one under the walker. Requires `state.loaded`.
+     */
+    screenToFloor(x: number, y: number): [number, number] | null;
+    /**
+     * Tour fork: where a floor point [x, z] shows on the screen, in CSS pixels from the canvas's
+     * top left; null when it is behind the camera. Requires `state.loaded`.
+     */
+    floorToScreen(x: number, z: number): [number, number] | null;
     /**
      * Request fullscreen for this viewer's root. Call from a user gesture; rejects on browser
      * refusal or destruction. Available before scene loading finishes. Without native support,
@@ -269,5 +350,6 @@ export {
     Global,
     ViewerState,
     CaptureOptions,
+    PlanInfo,
     ViewerHandle
 };

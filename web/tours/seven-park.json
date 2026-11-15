@@ -1,0 +1,81 @@
+{
+  "title": "Seven Park unit",
+  "credit": "Seven Park, Miami, by sa3d, (c) stepinc.co. Streamed from superspl.at; not for redistribution.",
+  "content": "https://d28zzqy0iyovbz.cloudfront.net/b185fd52/v1/meta.json",
+  "collision": "https://d28zzqy0iyovbz.cloudfront.net/b185fd52/v1/scene.voxel.json",
+  "aa": false,
+  "viewer": {
+    "version": 2,
+    "tonemapping": "none",
+    "highPrecisionRendering": true,
+    "background": {
+      "color": [
+        1,
+        1,
+        1
+      ]
+    },
+    "postEffectSettings": {
+      "sharpness": {
+        "enabled": false,
+        "amount": 0
+      },
+      "bloom": {
+        "enabled": false,
+        "intensity": 0.1,
+        "blurLevel": 2
+      },
+      "grading": {
+        "enabled": false,
+        "brightness": 1,
+        "contrast": 1,
+        "saturation": 1,
+        "tint": [
+          1,
+          1,
+          1
+        ]
+      },
+      "vignette": {
+        "enabled": false,
+        "intensity": 0.5,
+        "inner": 0.3,
+        "outer": 0.75,
+        "curvature": 1
+      },
+      "fringing": {
+        "enabled": false,
+        "intensity": 0.5
+      }
+    },
+    "animTracks": [],
+    "cameras": [
+      {
+        "initial": {
+          "position": [
+            -0.18209761381149292,
+            1.134474515914917,
+            -0.48300933837890625
+          ],
+          "target": [
+            -0.20049343283883161,
+            1.1127390661149814,
+            1.6404227628983286
+          ],
+          "fov": 100
+        }
+      }
+    ],
+    "annotations": [],
+    "startMode": "default"
+  },
+  "walk": {
+    "speed": 1.4,
+    "responseTime": 0.25,
+    "headBob": 1,
+    "stepLength": 0.7,
+    "eyeHeight": 1.5,
+    "fov": 90,
+    "jumpHeight": 0.8
+  }
+}
