@@ -25,6 +25,7 @@ import {
 import type { CameraComponent, Entity, GraphicsDevice, GSplatComponent, Layer } from 'playcanvas';
 
 import { CameraManager, isWalkAllowed } from './camera-manager';
+import type { Footprint } from './camera-manager';
 import type { Camera } from './cameras/camera';
 import { DEFAULT_WALK_SETTINGS } from './cameras/tour-walk-controller';
 import { Capture } from './capture';
@@ -36,6 +37,8 @@ import { DebugPanel } from './debug';
 import { FrameGate } from './frame-gate';
 import { initFullscreen } from './fullscreen';
 import type { GsafPlayer } from './gsaf/gsaf-player';
+import { DEFAULT_PLAN_CLEANUP, HeightCut, MAX_OUTLINE_POINTS } from './height-cut';
+import type { PlanCleanup } from './height-cut';
 import { InputController } from './input-controller';
 import { MeshDebugOverlay } from './mesh-debug-overlay';
 import { NavCursor } from './nav-cursor';
@@ -45,7 +48,7 @@ import type { ScenePicker } from './picker';
 import { FrameDepthPicker } from './picker-frame-depth';
 import { StochasticSplatRenderer } from './render/stochastic-splat-renderer';
 import type { ExperienceSettings, PostEffectSettings } from './settings';
-import type { CaptureOptions, Config, Global, XrMode } from './types';
+import type { CaptureOptions, Config, Global, PlanInfo, XrMode } from './types';
 import { VoxelDebugOverlay } from './voxel-debug-overlay';
 import { initXr } from './xr';
 
@@ -149,6 +152,11 @@ const anyPostEffectEnabled = (settings: PostEffectSettings): boolean => {
 };
 
 const vec = new Vec3();
+
+// tour fork plan view: how far outside the floor plan its crop keeps splats (outer walls, window
+// sills), and how far above the floor a wall cut eases in from and back out to, meters
+const PLAN_BOX_MARGIN = 0.75;
+const PLAN_TOP = 4;
 
 // When post effects are on, the final compose blit must not convert linear to gamma, which
 // the engine decides from `isColorBufferSrgb` on the target. The backbuffer is not ours to
@@ -623,6 +631,11 @@ class Viewer {
             this.cameraManager.setWalkSettings(this.walkSettings);
             applyCamera(this.cameraManager.camera);
 
+            // tour fork: plan view wall slicer
+            this.sceneTop = sceneBound.center.y + sceneBound.halfExtents.y;
+            this.heightCut = new HeightCut(app, gsplatComponent);
+            this.onDestroy(() => this.heightCut?.destroy());
+
             this.xr.setGrabTarget(results[0], !this.cameraManager.isObjectExperience);
 
             // the vr flag's prompt (ui/vr-prompt.ts) can start a session from here on, where
@@ -891,6 +904,185 @@ class Viewer {
         this.requireAlive('setWalkSettings');
         this.walkSettings = { ...this.walkSettings, ...settings };
         this.cameraManager?.setWalkSettings(this.walkSettings);
+    }
+
+    // tour fork: plan view, a top-down view with the walls cut down to a height. While the walls
+    // are cut, the plan is cropped too: to the tour's outline when it has one, otherwise to
+    // PLAN_BOX_MARGIN around the floor found under the walker. Scans carry a backdrop outside the
+    // rooms that the walk needs (the view out of the windows) but that clutters the plan.
+    private heightCut: HeightCut | null = null;
+
+    private sceneTop = 0;
+
+    private planView = false;
+
+    /** Floor the plan view was entered from; cut heights are measured from it. */
+    private planFloor = 0;
+
+    /** The plan's outline: corners [x, z]; null finds the floor automatically; [] crops nothing. */
+    private planOutline: [number, number][] | null = null;
+
+    /** World height the plan hides everything below; null hides nothing under the floor. */
+    private planBottom: number | null = null;
+
+    /** How hard the plan cleans up haze. */
+    private planCleanup: PlanCleanup = { ...DEFAULT_PLAN_CLEANUP };
+
+    setPlanCleanup(cleanup: Partial<PlanCleanup>): void {
+        this.requireAlive('setPlanCleanup');
+        const next = { ...this.planCleanup };
+        if (typeof cleanup.haze === 'number' && Number.isFinite(cleanup.haze)) {
+            next.haze = Math.min(0.95, Math.max(0, cleanup.haze));
+        }
+        if (cleanup.maxSize === null) next.maxSize = null;
+        else if (typeof cleanup.maxSize === 'number' && Number.isFinite(cleanup.maxSize)) {
+            next.maxSize = Math.max(0.005, cleanup.maxSize);
+        }
+        this.planCleanup = next;
+        if (this.heightCut) this.heightCut.cleanup = next;
+    }
+
+    getPlanInfo(): PlanInfo {
+        const floor = this.planView ? this.planFloor : this.currentFloor();
+        const cut = this.heightCut?.height;
+        const f = this.planFootprint(floor);
+        return {
+            active: this.planView,
+            floor,
+            height: Math.max(0.5, this.sceneTop - floor),
+            cut: cut === null || cut === undefined ? null : cut - floor,
+            bounds: [f.x - f.halfX, f.z - f.halfZ, f.x + f.halfX, f.z + f.halfZ],
+            outline: this.planOutline ? this.planOutline.map(([x, z]) => [x, z] as [number, number]) : null,
+            bottom: this.planBottom,
+            cleanup: { ...this.planCleanup }
+        };
+    }
+
+    setPlanBottom(y: number | null): void {
+        this.requireAlive('setPlanBottom');
+        if (y !== null && !Number.isFinite(y)) {
+            throw new Error('setPlanBottom: y must be a finite number or null');
+        }
+        this.planBottom = y;
+        if (this.heightCut) this.heightCut.bottom = y;
+    }
+
+    setPlanView(on: boolean): void {
+        this.requireLoaded('setPlanView');
+        if (on === this.planView) return;
+        if (on) this.planFloor = this.currentFloor();
+        const footprint = this.planFootprint(this.planFloor);
+        this.planView = on;
+        this.cameraManager.setPlanView(on, this.planFloor, footprint);
+        if (on) this.applyPlanCrop();
+        this.global.events.fire('planView:changed', on);
+    }
+
+    setCutHeight(height: number | null): void {
+        this.requireLoaded('setCutHeight');
+        if (height !== null && !Number.isFinite(height)) {
+            throw new Error('setCutHeight: height must be a finite number or null');
+        }
+        const floor = this.planView ? this.planFloor : this.currentFloor();
+        if (!this.planView) this.applyPlanCrop();
+        this.heightCut!.height = height === null ? null : floor + Math.max(0, height);
+    }
+
+    setPlanOutline(points: [number, number][] | null, frame = true): void {
+        this.requireAlive('setPlanOutline');
+        if (points !== null) {
+            if (!Array.isArray(points) || points.some((p) => !Array.isArray(p) || !p.every(Number.isFinite))) {
+                throw new Error('setPlanOutline: points must be [x, z] number pairs, or null');
+            }
+            if (points.length > MAX_OUTLINE_POINTS) {
+                throw new RangeError(`setPlanOutline: at most ${MAX_OUTLINE_POINTS} points`);
+            }
+        }
+        this.planOutline = points ? points.map(([x, z]) => [x, z]) : null;
+        if (!this.heightCut) return; // applied when the plan view opens
+        this.applyPlanCrop();
+        if (this.planView && frame && (points === null || points.length >= 3)) {
+            this.cameraManager.reframePlan(this.planFloor, this.planFootprint(this.planFloor));
+        }
+    }
+
+    screenToFloor(x: number, y: number): [number, number] | null {
+        this.requireLoaded('screenToFloor');
+        const floor = this.planView ? this.planFloor : this.currentFloor();
+        const camera = this.global.camera.camera!;
+        const near = camera.screenToWorld(x, y, camera.nearClip, new Vec3());
+        const far = camera.screenToWorld(x, y, camera.farClip, new Vec3());
+        const dy = far.y - near.y;
+        if (Math.abs(dy) < 1e-9) return null;
+        const t = (floor - near.y) / dy;
+        if (t < 0 || t > 1) return null;
+        return [near.x + (far.x - near.x) * t, near.z + (far.z - near.z) * t];
+    }
+
+    floorToScreen(x: number, z: number): [number, number] | null {
+        this.requireLoaded('floorToScreen');
+        const floor = this.planView ? this.planFloor : this.currentFloor();
+        const camera = this.global.camera.camera!;
+        const point = new Vec3(x, floor, z);
+        // behind the camera has no place on the screen
+        const toPoint = point.clone().sub(this.global.camera.getPosition());
+        if (toPoint.dot(this.global.camera.forward) <= 0) return null;
+        const screen = camera.worldToScreen(point, new Vec3());
+        return [screen.x, screen.y];
+    }
+
+    /** The plan's horizontal extent: the outline's bounds, or the floor found at `floor`. */
+    private planFootprint(floor: number): Footprint {
+        const outline = this.planOutline;
+        if (outline && outline.length >= 3) {
+            let x0 = Infinity;
+            let x1 = -Infinity;
+            let z0 = Infinity;
+            let z1 = -Infinity;
+            for (const [x, z] of outline) {
+                x0 = Math.min(x0, x);
+                x1 = Math.max(x1, x);
+                z0 = Math.min(z0, z);
+                z1 = Math.max(z1, z);
+            }
+            return { x: (x0 + x1) / 2, z: (z0 + z1) / 2, halfX: (x1 - x0) / 2, halfZ: (z1 - z0) / 2 };
+        }
+        return this.cameraManager.findFootprint(floor);
+    }
+
+    /** Crop the plan to the outline, to nothing (an empty outline), or to a box around the floor. */
+    private applyPlanCrop() {
+        const cut = this.heightCut!;
+        const floor = this.planView ? this.planFloor : this.currentFloor();
+        const outline = this.planOutline;
+        cut.bottom = this.planBottom;
+        cut.cleanup = this.planCleanup;
+        if (outline) {
+            cut.box = null;
+            cut.outline = outline;
+        } else {
+            const footprint = this.cameraManager.findFootprint(floor);
+            const m = PLAN_BOX_MARGIN;
+            cut.box = [
+                footprint.x - footprint.halfX - m,
+                footprint.z - footprint.halfZ - m,
+                footprint.x + footprint.halfX + m,
+                footprint.z + footprint.halfZ + m
+            ];
+            cut.outline = [];
+        }
+        cut.top = floor + PLAN_TOP;
+    }
+
+    /**
+     * The floor under the camera: the collision surface below it, or without collision the
+     * camera's height less the walker's eye height.
+     */
+    private currentFloor(): number {
+        const { position } = this.cameraManager.camera;
+        const reach = this.walkSettings.eyeHeight + 1;
+        const hit = this.inputController?.collision?.queryRay(position.x, position.y, position.z, 0, -1, 0, reach);
+        return hit ? hit.y : position.y - this.walkSettings.eyeHeight;
     }
 
     // tour fork: change sharpness, color grading, vignette etc. live

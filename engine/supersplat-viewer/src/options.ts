@@ -154,6 +154,8 @@ type WalkSettings = {
     eyeHeight: number;
     /** Vertical field of view while walking, degrees [90]. */
     fov: number;
+    /** How high Space jumps, meters; 0 turns jumping off [0.8, the stock jump]. */
+    jumpHeight: number;
 };
 
 /** Options for `createViewer`. */

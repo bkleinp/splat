@@ -3,6 +3,7 @@ import './style.css';
 import type { ViewerHandle } from '@playcanvas/supersplat-viewer/viewer';
 
 import { mountAdmin } from './admin';
+import { mountPlanControls } from './plan-controls';
 import { listTours, loadTour } from './tours';
 import { mountTour } from './viewer';
 
@@ -81,7 +82,8 @@ const renderTour = async (name: string, admin: boolean) => {
 
     const viewer = await mountTour(stage, tour);
     showLoading(viewer, stage);
-    if (panel) mountAdmin(panel, name, tour, viewer);
+    const planControls = mountPlanControls(stage, viewer);
+    if (panel) mountAdmin(panel, name, tour, viewer, stage, planControls);
 };
 
 const route = async () => {

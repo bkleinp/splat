@@ -44,7 +44,7 @@ in `public/`, which is gitignored. The product tours themselves run in the web a
 
 | Change | Where |
 | --- | --- |
-| Human walking pace with eased start/stop, no jumping, subtle head bob (off under OS reduced motion), all tunable as `WalkSettings` | `src/cameras/tour-walk-controller.ts` (new), used by `src/camera-manager.ts` |
+| Human walking pace with eased start/stop, the stock jump at a set height (0 = off), subtle head bob (paused mid-air, off under OS reduced motion), all tunable as `WalkSettings` | `src/cameras/tour-walk-controller.ts` (new), used by `src/camera-manager.ts` |
 | `walkOnly` option (`?walkonly`): starts in walk, no intro animation, no switching to fly/orbit, settles onto the floor once collision loads | `src/options.ts`, `src/index.ts`, `src/index.html`, `src/camera-manager.ts` |
 | `walk` option, and `getWalkSettings` / `setWalkSettings` / `setPostEffects` on the viewer handle; `DEFAULT_WALK_SETTINGS` export | `src/options.ts`, `src/types.ts`, `src/viewer.ts`, `src/index.ts` |
 

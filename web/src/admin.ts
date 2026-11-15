@@ -1,7 +1,9 @@
 import { defaultSettings, POST_EFFECT_RANGES } from '@playcanvas/supersplat-viewer/settings';
-import { DEFAULT_WALK_SETTINGS } from '@playcanvas/supersplat-viewer/viewer';
+import { DEFAULT_PLAN_CLEANUP, DEFAULT_WALK_SETTINGS } from '@playcanvas/supersplat-viewer/viewer';
 import type { ViewerHandle, WalkSettings } from '@playcanvas/supersplat-viewer/viewer';
 
+import { mountOutlineEditor } from './outline-editor';
+import type { PlanControls } from './plan-controls';
 import { applyToAllTours, listTours, saveTour } from './tours';
 import type { Tour } from './tours';
 
@@ -17,7 +19,8 @@ const WALK_SLIDERS: Record<keyof WalkSettings, Slider> = {
     headBob: { label: 'Head bob', unit: '×', min: 0, max: 3, step: 0.05, hint: '0 off, 1 subtle. Off for viewers with reduced motion on.' },
     stepLength: { label: 'Step length', unit: 'm', min: 0.4, max: 1.2, step: 0.01, hint: 'The bob rhythm. Shorter is quicker steps.' },
     eyeHeight: { label: 'Eye height', unit: 'm', min: 1.2, max: 2, step: 0.01, hint: 'Above the floor.' },
-    fov: { label: 'Field of view', unit: '°', min: 50, max: 110, step: 1, hint: 'Lower looks more natural, higher shows more of the room.' }
+    fov: { label: 'Field of view', unit: '°', min: 50, max: 110, step: 1, hint: 'Lower looks more natural, higher shows more of the room.' },
+    jumpHeight: { label: 'Jump height', unit: 'm', min: 0, max: 1.5, step: 0.05, hint: 'Space to jump. 0 turns jumping off.' }
 };
 
 const clone = <T>(value: T): T => structuredClone(value);
@@ -72,11 +75,23 @@ const toggleRow = (label: string, get: () => boolean, set: (on: boolean) => void
     return { row, refresh };
 };
 
-const mountAdmin = (panel: HTMLElement, name: string, tour: Tour, viewer: ViewerHandle) => {
-    let saved = clone(tour);
-    let draft = clone(tour);
-    draft.walk = { ...DEFAULT_WALK_SETTINGS, ...draft.walk };
-    draft.viewer.postEffectSettings ??= defaultSettings().postEffectSettings;
+const mountAdmin = (
+    panel: HTMLElement,
+    name: string,
+    tour: Tour,
+    viewer: ViewerHandle,
+    stage: HTMLElement,
+    planControls: PlanControls
+) => {
+    // fill settings a tour file predates with their defaults, so opening it doesn't count as a change
+    const normalize = (t: Tour): Tour => {
+        const n = clone(t);
+        n.walk = { ...DEFAULT_WALK_SETTINGS, ...n.walk };
+        n.viewer.postEffectSettings ??= defaultSettings().postEffectSettings;
+        return n;
+    };
+    let saved = normalize(tour);
+    let draft = clone(saved);
 
     const refreshers: (() => void)[] = [];
     const status = el('p', { className: 'status' });
@@ -88,6 +103,7 @@ const mountAdmin = (panel: HTMLElement, name: string, tour: Tour, viewer: Viewer
         const dirty = isDirty();
         saveButton.disabled = !dirty;
         revertButton.disabled = !dirty;
+        defaultsButton.disabled = atDefaults();
         if (dirty) status.textContent = 'Unsaved changes';
     };
     const say = (message: string, error = false) => {
@@ -98,9 +114,35 @@ const mountAdmin = (panel: HTMLElement, name: string, tour: Tour, viewer: Viewer
     const applyAll = () => {
         viewer.setWalkSettings(draft.walk);
         viewer.setPostEffects(draft.viewer.postEffectSettings);
+        viewer.setPlanOutline(draft.plan?.outline ?? null);
+        viewer.setPlanBottom(draft.plan?.bottom ?? null);
+        viewer.setPlanCleanup({ ...DEFAULT_PLAN_CLEANUP, ...draft.plan?.cleanup });
         refreshers.forEach((refresh) => refresh());
         updateDirty();
     };
+
+    // --- floor plan cleanup (per tour: "Apply to all tours" leaves it alone)
+    const setPlanField = <K extends keyof NonNullable<Tour['plan']>>(key: K, value: NonNullable<Tour['plan']>[K] | undefined) => {
+        if (value !== undefined) {
+            draft.plan = { ...draft.plan, [key]: value };
+        } else if (draft.plan) {
+            delete draft.plan[key];
+            if (Object.keys(draft.plan).length === 0) delete draft.plan;
+        }
+        updateDirty();
+    };
+    const outlineEditor = mountOutlineEditor({
+        stage,
+        viewer,
+        planControls,
+        get: () => draft.plan?.outline ?? null,
+        set: (outline) => setPlanField('outline', outline ?? undefined),
+        getBottom: () => draft.plan?.bottom ?? null,
+        setBottom: (y) => setPlanField('bottom', y ?? undefined),
+        getCleanup: () => draft.plan?.cleanup,
+        setCleanup: (cleanup) => setPlanField('cleanup', cleanup)
+    });
+    refreshers.push(outlineEditor.refresh);
 
     // --- walking
     const walkSection = el('section', {}, el('h2', {}, 'Walking'));
@@ -187,17 +229,20 @@ const mountAdmin = (panel: HTMLElement, name: string, tour: Tour, viewer: Viewer
 
     revertButton.addEventListener('click', () => {
         draft = clone(saved);
-        draft.walk = { ...DEFAULT_WALK_SETTINGS, ...draft.walk };
         applyAll();
         say('Reverted to the last save');
     });
 
-    const defaultsButton = el('button', { type: 'button' }, 'Defaults');
+    // the settings the tours started with: DEFAULT_WALK_SETTINGS and no post effects
+    const atDefaults = () =>
+        JSON.stringify(draft.walk) === JSON.stringify({ ...DEFAULT_WALK_SETTINGS }) &&
+        JSON.stringify(draft.viewer.postEffectSettings) === JSON.stringify(defaultSettings().postEffectSettings);
+    const defaultsButton = el('button', { type: 'button', className: 'wide' }, 'Reset to original settings');
     defaultsButton.addEventListener('click', () => {
         draft.walk = { ...DEFAULT_WALK_SETTINGS };
         draft.viewer.postEffectSettings = defaultSettings().postEffectSettings;
         applyAll();
-        say('Defaults loaded. Save to keep them.');
+        say(isDirty() ? 'Original settings loaded. Save to keep them.' : 'Already on the original settings.');
     });
 
     const applyAllButton = el('button', { type: 'button', className: 'wide' }, 'Apply to all tours');
@@ -234,10 +279,12 @@ const mountAdmin = (panel: HTMLElement, name: string, tour: Tour, viewer: Viewer
         ),
         walkSection,
         lookSection,
+        outlineEditor.section,
         el(
             'footer',
             {},
-            el('div', { className: 'buttons' }, saveButton, revertButton, defaultsButton),
+            el('div', { className: 'buttons' }, saveButton, revertButton),
+            defaultsButton,
             applyAllButton,
             status
         )
