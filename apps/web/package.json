@@ -1,0 +1,26 @@
+{
+  "name": "@splat/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@playcanvas/supersplat-viewer": "link:..\\..\\engine\\supersplat-viewer",
+    "@splat/llm": "workspace:^",
+    "next": "15",
+    "playcanvas": "2.24.1",
+    "react": "19",
+    "react-dom": "19"
+  },
+  "devDependencies": {
+    "@types/node": "22",
+    "@types/react": "19",
+    "@types/react-dom": "19",
+    "typescript": "5"
+  }
+}

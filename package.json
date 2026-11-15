@@ -1,0 +1,19 @@
+{
+  "name": "splat",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "viewer:build": "npm ci --prefix engine/supersplat-viewer && npm run build --prefix engine/supersplat-viewer",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "turbo": "2",
+    "typescript": "5"
+  }
+}
