@@ -191,6 +191,18 @@ To fix or add a zone:
 
 To check where a spot resolves, ask a question there: the chat badge shows the zone it was placed in.
 
+## Listing content (House 3)
+
+All fictional. Each document is a source the model cites (chips in the chat), and every section is tagged with the zones it's about, so "this" questions pull the right one.
+
+| Source | What's in it |
+|---|---|
+| Listing facts | Price, beds/baths, 960 sq ft interior, 110 sq ft balcony, year, parking, HOA, countertops, appliance package. |
+| Realtor amenities form | Room-by-room and object-by-object descriptions, a staging note (furniture isn't included), the layout. |
+| **Floor plan & dimensions** | Room sizes and object sizes, from the zone boxes, so they match the 3D scene. Examples: kitchen 12′6″ × 8′8″, primary bedroom 11′6″ × 12′8″ (fits a king), 60″ double vanity, 60 × 36″ shower. |
+| **Appliance & fixture schedule** | Makes and product lines: Bosch Benchmark and Miele 30″ induction cooktops, a Bosch 800 Series wall oven and dishwasher, a Kraus sink, a Kohler faucet, Hansgrohe/Kohler/TOTO/Grohe bath fixtures, Lutron shades, a Carrier heat pump. **Product-line names only, no SKUs or model numbers**, so no invented specs get pinned on a real product. |
+| HOA documents, seller disclosure, neighborhood guide | Fees and rules, systems and warranty, nearby distances. |
+
 ## Citations, streaming and context switching
 
 - **Citations:** the model ends factual sentences with `[Source label]`, and `Chat.tsx` turns those into chips. Only this house's real labels count (`sourceLabels(house)`).

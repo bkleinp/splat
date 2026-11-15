@@ -206,13 +206,19 @@ const house3: House = {
     { key: "property_type", label: "Property type", displayValue: "Condominium, 12th floor", source: "Listing basics form" },
     { key: "bedrooms", label: "Bedrooms", displayValue: "2", source: "Listing basics form" },
     { key: "bathrooms", label: "Bathrooms", displayValue: "2", source: "Listing basics form" },
-    { key: "interior_sqft", label: "Interior", displayValue: "1,080 sq ft", source: "Condo declaration" },
+    { key: "interior_sqft", label: "Interior", displayValue: "960 sq ft", source: "Condo declaration" },
     { key: "balcony_sqft", label: "Balcony", displayValue: "110 sq ft", source: "Condo declaration" },
     { key: "year_built", label: "Year built", displayValue: "2025 (new construction)", source: "County assessor record" },
     { key: "flooring", label: "Flooring", displayValue: "Wide-plank light oak engineered wood in living areas and bedrooms", source: "Realtor amenities form" },
     { key: "ceiling_height", label: "Ceilings", displayValue: "9 ft 6 in", source: "Realtor amenities form" },
     { key: "windows", label: "Windows", displayValue: "Floor-to-ceiling impact-resistant glass", source: "Realtor amenities form" },
-    { key: "countertop_material", label: "Countertops", displayValue: "White quartz", source: "Realtor amenities form" },
+    { key: "countertop_material", label: "Countertops", displayValue: "White quartz (Caesarstone Pure White)", source: "Appliance & fixture schedule" },
+    {
+      key: "appliances",
+      label: "Kitchen appliances",
+      displayValue: "Two 30-inch induction cooktops (Bosch Benchmark, Miele), Bosch 800 Series wall oven and dishwasher",
+      source: "Appliance & fixture schedule",
+    },
     { key: "heating_type", label: "Heating & cooling", displayValue: "Central air conditioning and heat pump", source: "Seller disclosure" },
     { key: "parking", label: "Parking", displayValue: "1 assigned garage space", source: "Condo declaration" },
     { key: "hoa_fee", label: "HOA", displayValue: "$780 / month", source: "HOA documents" },
@@ -318,13 +324,13 @@ const house3: House = {
           title: "Oven range",
           pageNumber: 2,
           zones: ["kitchen-oven-range"],
-          content: "Stainless steel oven range on the main counter run with a convection oven.",
+          content: "Built-in convection wall oven at eye level in a tall cabinet column at the end of the main counter run.",
         },
         {
           title: "Main run stove",
           pageNumber: 2,
           zones: ["kitchen-stove-main"],
-          content: "The kitchen's second stove, on the main counter run beside the oven range: a 30-inch induction stovetop, so two people can cook at once.",
+          content: "The kitchen's second stove, on the main counter run near the wall oven: a 30-inch induction stovetop, so two people can cook at once.",
         },
         {
           title: "Tall cabinets",
@@ -440,6 +446,213 @@ const house3: House = {
           pageNumber: 3,
           zones: ["primary-toilet"],
           content: "Wall-hung toilet with a concealed tank in its own nook beside the vanity.",
+        },
+      ],
+    },
+    {
+      id: "h3-floorplan",
+      filename: "floor-plan-and-dimensions.pdf",
+      title: "Floor plan & dimensions",
+      sourceKind: "realtor_upload",
+      sections: [
+        {
+          title: "Overview",
+          pageNumber: 1,
+          zones: [],
+          content:
+            "960 sq ft interior (about 810 sq ft of net room area) plus a 110 sq ft balcony. Ceilings are 9 ft 6 in throughout. The kitchen, dining area, and living room form one open space about 30 ft long from the kitchen to the living room windows.",
+        },
+        {
+          title: "Kitchen",
+          pageNumber: 1,
+          zones: ["kitchen"],
+          content: "Kitchen: 12 ft 6 in x 8 ft 8 in, a galley with a 3 ft 4 in aisle between the two counter runs.",
+        },
+        {
+          title: "Kitchen counters",
+          pageNumber: 1,
+          zones: ["kitchen-back-counter", "kitchen-main-counter"],
+          content:
+            "Each counter run is about 12 ft 4 in long. Counters are 36 in high and 25 in deep; upper cabinets start 18 in above the counter and are 13 in deep.",
+        },
+        {
+          title: "Kitchen tall cabinets",
+          pageNumber: 1,
+          zones: ["kitchen-cabinets"],
+          content: "Tall pantry cabinets: 36 in wide, 24 in deep, 8 ft tall.",
+        },
+        {
+          title: "Dining area",
+          pageNumber: 1,
+          zones: ["dining", "dining-table"],
+          content: "Dining area: 10 ft 0 in x 12 ft 2 in. Fits a 42 in round table for four (shown staged) with 3 ft of clearance on every side.",
+        },
+        {
+          title: "Living room",
+          pageNumber: 2,
+          zones: ["living-room"],
+          content: "Living room: 9 ft 8 in x 12 ft 8 in, open to the dining area (about 22 ft 10 in deep together).",
+        },
+        {
+          title: "Living room furniture sizes",
+          pageNumber: 2,
+          zones: ["couch", "living-tv", "living-shelf"],
+          content:
+            "The seating wall fits an L-shaped sectional up to 10 ft x 5 ft (shown staged). The TV wall is 7 ft 6 in wide and wired for a TV up to 75 in. The floating media shelf is 90 in long and 16 in deep.",
+        },
+        {
+          title: "Storage closet",
+          pageNumber: 2,
+          zones: ["storage-closet"],
+          content: "Storage closet: 4 ft wide, 22 in deep, 8 ft tall.",
+        },
+        {
+          title: "Balcony",
+          pageNumber: 2,
+          zones: ["balcony", "living-balcony-door", "primary-balcony-door", "bedroom-2-balcony-door"],
+          content:
+            "Balcony: about 35 ft long and just over 3 ft deep (110 sq ft), running the whole window side. Balcony doors: 9 ft 6 in tall glass, about 9 ft 8 in wide in the living room, 11 ft 6 in in the primary bedroom, and 12 ft in the second bedroom.",
+        },
+        {
+          title: "Primary bedroom",
+          pageNumber: 3,
+          zones: ["primary-bedroom", "primary-bed", "primary-nightstand"],
+          content:
+            "Primary bedroom: 11 ft 6 in x 12 ft 8 in. Fits a king bed (76 x 80 in) with 24 in nightstands on both sides and about 3 ft of walking space at the foot.",
+        },
+        {
+          title: "Primary bedroom dresser wall",
+          pageNumber: 3,
+          zones: ["primary-dresser", "primary-tv"],
+          content: "The wall facing the bed fits a dresser up to 55 in wide and 24 in deep, with a TV up to 55 in above it.",
+        },
+        {
+          title: "Walk-in closet",
+          pageNumber: 3,
+          zones: ["primary-closet"],
+          content: "Walk-in closet: 5 ft 9 in x 9 ft 2 in, with about 9 ft of hanging space in two tiers and 8 ft of shelving.",
+        },
+        {
+          title: "Primary bathroom",
+          pageNumber: 3,
+          zones: ["primary-bath", "primary-shower", "primary-vanity", "primary-toilet"],
+          content: "Primary bathroom: 6 ft 9 in x 12 ft 10 in. Shower 60 x 36 in. Vanity 60 in wide and 21 in deep.",
+        },
+        {
+          title: "Second bedroom",
+          pageNumber: 3,
+          zones: ["bedroom-2", "bedroom-2-bed", "bedroom-2-nightstand", "bedroom-2-dresser", "bedroom-2-tv"],
+          content:
+            "Second bedroom: 12 ft 2 in x 8 ft 10 in. Fits a queen bed (60 x 80 in) with an 18 in nightstand, and a dresser up to 60 in wide on the wall facing the bed.",
+        },
+        {
+          title: "Second bedroom closet",
+          pageNumber: 3,
+          zones: ["bedroom-2-closet"],
+          content: "Reach-in closet: 6 ft wide and 2 ft deep, behind sliding doors.",
+        },
+        {
+          title: "Second bathroom",
+          pageNumber: 3,
+          zones: ["secondary-bath", "secondary-shower", "secondary-vanity", "secondary-toilet"],
+          content: "Second bathroom: 8 ft 10 in x 4 ft 7 in. Shower 34 x 48 in. Vanity 24 in wide.",
+        },
+      ],
+    },
+    {
+      id: "h3-appliances",
+      filename: "appliance-and-fixture-schedule.pdf",
+      title: "Appliance & fixture schedule",
+      sourceKind: "realtor_upload",
+      sections: [
+        {
+          title: "Back counter stove",
+          pageNumber: 1,
+          zones: ["kitchen-stove"],
+          content:
+            "Bosch Benchmark Series 30-inch induction cooktop, four cooking zones, flush-mounted in the back counter. Above it: a Zephyr 30-inch under-cabinet recirculating range hood with LED task lights.",
+        },
+        {
+          title: "Main run stove",
+          pageNumber: 1,
+          zones: ["kitchen-stove-main"],
+          content: "Miele 30-inch induction cooktop, four cooking zones, set into the main counter run.",
+        },
+        {
+          title: "Oven",
+          pageNumber: 1,
+          zones: ["kitchen-oven-range"],
+          content:
+            "Bosch 800 Series 30-inch single built-in wall oven with European convection (4.6 cu ft), set at eye level in the tall cabinet column at the end of the main run.",
+        },
+        {
+          title: "Kitchen sink and dishwasher",
+          pageNumber: 1,
+          zones: ["kitchen-sink"],
+          content:
+            "Kraus Kore 30-inch single-bowl undermount stainless steel workstation sink with a Kohler Sous pull-down faucet. Beside it: a Bosch 800 Series 24-inch stainless steel dishwasher rated at 42 dBA.",
+        },
+        {
+          title: "Counters and cabinetry",
+          pageNumber: 1,
+          zones: ["kitchen-back-counter", "kitchen-main-counter", "kitchen-cabinets"],
+          content:
+            "Caesarstone Pure White quartz counters (3 cm). Flat-panel European-style cabinetry with Blum soft-close hinges and drawer runners. Under-cabinet LED strip lighting on a dimmer. The tall pantry has pull-out shelves.",
+        },
+        {
+          title: "Living room",
+          pageNumber: 2,
+          zones: ["living-room", "living-tv", "living-shelf"],
+          content:
+            "32-inch LED ring chandelier (included). 4-inch recessed LED downlights on dimmers. TV wall wired with power, HDMI conduit, and Cat6 behind the screen and the floating white-oak media shelf.",
+        },
+        {
+          title: "Balcony doors and shades",
+          pageNumber: 2,
+          zones: ["living-balcony-door", "primary-balcony-door", "bedroom-2-balcony-door"],
+          content:
+            "Impact-rated aluminum sliding glass doors with Miami-Dade product approval. Lutron Sivoia QS motorized shades: light-filtering in the living room, blackout in both bedrooms.",
+        },
+        {
+          title: "Primary bathroom vanity",
+          pageNumber: 3,
+          zones: ["primary-vanity"],
+          content:
+            "60-inch floating double vanity with a quartz top, two Kohler Verticyl undermount sinks, Hansgrohe Talis E faucets in brushed nickel, and a full-width LED-backlit mirror.",
+        },
+        {
+          title: "Primary shower",
+          pageNumber: 3,
+          zones: ["primary-shower"],
+          content:
+            "Frameless 3/8-inch glass enclosure, Hansgrohe Raindance rain showerhead and handheld on a slide bar, thermostatic valve, and a linear floor drain.",
+        },
+        {
+          title: "Toilets",
+          pageNumber: 3,
+          zones: ["primary-toilet", "secondary-toilet"],
+          content: "TOTO Aquia wall-hung dual-flush toilets on Geberit in-wall tanks, in both bathrooms.",
+        },
+        {
+          title: "Second bathroom fixtures",
+          pageNumber: 3,
+          zones: ["secondary-vanity", "secondary-shower"],
+          content:
+            "24-inch floating vanity with a quartz top, a Kohler undermount sink, and a Robern mirrored medicine cabinet. Shower with a frameless glass door and a Grohe Euphoria shower system.",
+        },
+        {
+          title: "Bedrooms",
+          pageNumber: 3,
+          zones: ["primary-bedroom", "bedroom-2", "primary-closet", "bedroom-2-closet"],
+          content:
+            "Recessed LED downlights and ceiling-fan-ready junction boxes in both bedrooms. LED strip lighting in the walk-in closet; the reach-in closet has sliding doors with soft-close tracks.",
+        },
+        {
+          title: "Whole-home systems",
+          pageNumber: 4,
+          zones: [],
+          content:
+            "Carrier ducted heat pump with central air and an ecobee smart thermostat. 9-inch-wide engineered white oak plank floors in the living areas and bedrooms; 24 x 48 in porcelain tile in the bathrooms.",
         },
       ],
     },
