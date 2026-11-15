@@ -3,34 +3,30 @@
 import { useEffect, useRef, useState } from "react";
 import type { ViewerHandle } from "@playcanvas/supersplat-viewer/viewer";
 import "@playcanvas/supersplat-viewer/viewer.css";
-
-export type SceneProps = {
-  contentUrl: string;
-  settingsUrl: string;
-  collisionUrl?: string;
-  aa?: boolean;
-  credit: string;
-};
+import type { Tour } from "@/lib/tours";
 
 /**
- * Full-screen 3D tour on engine/supersplat-viewer, built-in UI off
- * (engine/README.md). The tour is walk-only: the viewer is put in walk mode
- * once the scene and its collision are ready, and put back if anything (e.g.
- * the viewer's 1/2/3/Esc shortcuts) switches it to orbit or fly. onViewer hands
- * the live handle to the parent (null on teardown).
+ * The walk-through: the viewer fork (engine/supersplat-viewer) in walk-only
+ * mode with the tour's walk feel and floor plan settings, built-in UI off.
+ * onViewer hands the live handle to the parent (null on teardown) for the
+ * floor plan controls, the chat and the settings panel; stageRef is the
+ * element the viewer fills, for overlays (the outline editor draws on it).
  */
 export function SplatViewer({
-  scene,
+  tour,
+  plan,
   onViewer,
+  stageRef,
 }: {
-  scene: SceneProps;
+  tour: Tour;
+  /** Whether the floor plan is showing (changes the hint). */
+  plan: boolean;
   onViewer?: (viewer: ViewerHandle | null) => void;
+  stageRef?: React.Ref<HTMLElement>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [viewer, setViewer] = useState<ViewerHandle | null>(null);
   const [progress, setProgress] = useState(0);
   const [loaded, setLoaded] = useState(false);
-  const [walkAllowed, setWalkAllowed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Keep the latest callback without re-creating the viewer when it changes.
@@ -49,43 +45,27 @@ export function SplatViewer({
       if (cancelled) return;
       const v = await createViewer({
         container,
+        settings: structuredClone(tour.viewer),
+        contentUrl: tour.content,
+        collisionUrl: tour.collision ?? undefined,
+        aa: tour.aa,
         ui: false,
-        settings: scene.settingsUrl,
-        contentUrl: scene.contentUrl,
-        collisionUrl: scene.collisionUrl,
-        aa: scene.aa,
+        walkOnly: true,
+        walk: tour.walk,
       });
       if (cancelled) {
         v.destroy();
         return;
       }
+      v.setPlanOutline(tour.plan?.outline ?? null);
+      v.setPlanBottom(tour.plan?.bottom ?? null);
+      if (tour.plan?.cleanup) v.setPlanCleanup(tour.plan.cleanup);
+
       created = v;
-
-      // Walk is the only mode. Writing cameraMode directly is the documented
-      // way to enter walk; deferred so we never write state inside its own
-      // change event.
-      const keepWalking = () =>
-        queueMicrotask(() => {
-          if (!cancelled && v.state.loaded && v.state.walkAllowed && v.state.cameraMode !== "walk") {
-            v.state.cameraMode = "walk";
-          }
-        });
-
-      setViewer(v);
       setProgress(v.state.progress);
       setLoaded(v.state.loaded);
-      setWalkAllowed(v.state.walkAllowed);
       v.events.on("progress:changed", (p: number) => setProgress(p));
-      v.events.on("loaded:changed", (l: boolean) => {
-        setLoaded(l);
-        keepWalking();
-      });
-      v.events.on("walkAllowed:changed", (w: boolean) => {
-        setWalkAllowed(w);
-        keepWalking();
-      });
-      v.events.on("cameraMode:changed", keepWalking);
-      keepWalking();
+      v.events.on("loaded:changed", (l: boolean) => setLoaded(l));
       onViewerRef.current?.(v);
     })().catch((e: unknown) => {
       if (!cancelled) setError(e instanceof Error ? e.message : "The 3D tour couldn't load.");
@@ -95,13 +75,12 @@ export function SplatViewer({
       cancelled = true;
       // Browsers cap live WebGL contexts (~16), so every mount must be torn down.
       created?.destroy();
-      setViewer(null);
       onViewerRef.current?.(null);
     };
-  }, [scene.contentUrl, scene.settingsUrl, scene.collisionUrl, scene.aa]);
+  }, [tour]);
 
   return (
-    <section className="scene" aria-label="3D tour">
+    <section className="scene" aria-label="3D tour" ref={stageRef}>
       <div ref={containerRef} className="scene-canvas" />
 
       {!loaded && !error && (
@@ -116,18 +95,12 @@ export function SplatViewer({
 
       {loaded && (
         <div className="scene-bottom">
-          <div className="scene-controls" role="toolbar" aria-label="Camera">
-            {/* resetCamera keeps walk mode and returns to where walking started. */}
-            <button type="button" onClick={() => viewer?.resetCamera()}>
-              Reset position
-            </button>
-          </div>
           <span className="scene-hint">
-            {walkAllowed
-              ? "Click a spot to walk there · drag to look · WASD to move"
-              : "Walking isn't available for this scene · drag to look around"}
+            {plan
+              ? "Drag to tilt and turn · scroll or pinch to zoom"
+              : "Click a spot to walk there · drag to look · WASD to move"}
           </span>
-          <span className="scene-credit">{scene.credit}</span>
+          {tour.credit && <span className="scene-credit">{tour.credit}</span>}
         </div>
       )}
     </section>

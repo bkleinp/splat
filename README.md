@@ -5,14 +5,24 @@ Walk through a home as a 3D Gaussian splat and ask an AI assistant about it. Spe
 ## Layout
 
 ```text
-apps/web/   Next.js site: pick a house → full-screen 3D walkthrough with a floating chat
+apps/web/   The product (Next.js): home page → full-screen walk-through with the Walk / Floor plan
+            switch and the location-aware chat floating over it. Tour files live in
+            apps/web/tours/*.json, edited on dev-only settings pages (/tours)
 llm/        @splat/llm: listing data, spatial resolution, prompts, Claude client (Haiku 5.5)
-engine/     supersplat-viewer (git subtree), embedded by apps/web; see engine/README.md
+engine/     supersplat-viewer fork (git subtree): tour walking, floor plan view; see engine/README.md
 docs/       llm-layer.md: how the chat, context and location work
 ```
 
-pnpm workspaces + Turborepo. The viewer in `engine/supersplat-viewer` keeps its own npm setup;
-`apps/web` links to its built `dist/`.
+pnpm workspaces + Turborepo for `apps/web` and `llm`. `engine/supersplat-viewer` keeps its own npm
+setup; `apps/web` links to the viewer's built `dist/`.
+
+**Tours.** A house in `llm/src/houses.ts` names its tour (`scene: { tour: "seven-park" }`); the
+walk-through is built from `apps/web/tours/seven-park.json` (content, collision, look, walk feel,
+floor plan). On the dev server, http://localhost:3000/tours lists the tours and links each one's
+settings page (`/house/<slug>/admin`, e.g. `/house/house-3/admin`), which previews changes live and saves them to the JSON file
+(commit it to keep them). The settings pages and their API are dev-only: a production build 404s them.
+The `apartment` tour reads its scan from `engine/supersplat-viewer/public/samples`
+(`engine/scripts/fetch-sample.sh`).
 
 ## Setup (Windows)
 

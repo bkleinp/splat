@@ -2,7 +2,7 @@
 
 How the listing chat works: where house context lives, how the visitor's position in the 3D tour becomes a named location, and how both reach Claude.
 
-**Current state:** one house, the Seven Park unit (`house-3`), shown as a full-screen, walk-only 3D tour with the chat floating over it. The chat is **location-aware**:
+**Current state:** one house, the Seven Park unit (`house-3`), shown as a full-screen walk-through (walk-only, with a Walk / Floor plan switch) with the chat floating over it. The chat is **location-aware**:
 - The camera position is mapped to a **room**, and the view ray to the **object** you're facing, such as the kitchen sink, the stove or the shower.
 - The direction you face picks out what "this" means.
 
@@ -21,8 +21,19 @@ The location is measured when you ask; the model works out what you mean from it
 | `apps/web/src/app/house/[slug]/camera.ts` | `readPose()`: the viewer camera's position and direction. |
 | `apps/web/src/lib/pose.ts` | Validates poses from the browser (finite numbers within ±1000). |
 | `apps/web/src/app/house/[slug]/HouseExperience.tsx` | Full-screen layout: tour, title, floating chat. Reads the camera pose for each question. |
-| `apps/web/src/app/house/[slug]/SplatViewer.tsx` | Embeds `engine/supersplat-viewer` (`createViewer({ ui: false })`), walk-only, with a loading bar, Reset position, hint and credit. |
+| `apps/web/src/app/house/[slug]/SplatViewer.tsx` | The walk-through, set up as the tours app does it (`web/src/viewer.ts`): `createViewer` with `walkOnly`, the tour's walk feel and floor plan outline/trim/cleanup, built-in UI off. Loading bar, hint, credit. |
+| `apps/web/src/components/tour/` | The walk-through (`SplatViewer.tsx`), the Walk / Floor plan switch and Walls slider (`PlanControls.tsx`, `usePlanView`) and `readPose` (`camera.ts`), shared by the house page and the tour settings page. |
+| `apps/web/src/lib/tours.ts` | Server-side load / list / save for `apps/web/tours/<name>.json`. |
+| `apps/web/src/app/house/[slug]/admin/` | Dev-only settings page for the home's tour (`/house/<slug>/admin`): walk feel, look, floor plan outline and cleanup, saved through `app/api/tours`. `/tours` lists the tour files. |
 | `apps/web/src/app/house/[slug]/Chat.tsx` | Chat panel. Sends the pose with each question, streams answers, renders citations as chips. |
+
+## The 3D tour
+
+- **Tour file:** the house names its tour (`scene: { tour: "seven-park" }` in `houses.ts`), and the page reads `apps/web/tours/seven-park.json` on the server. That file holds the content, collision, look, walk feel and floor plan settings, and it's edited on the dev-only settings page (`/house/house-3/admin`).
+- **Viewer:** the fork in `engine/supersplat-viewer`, built with `pnpm viewer:build`, in its own **walk-only** mode (`walkOnly: true`) with the tour's walk feel. Visitors click or tap a spot to walk there, drag to look, and use WASD to move.
+- **Floor plan:** the **Walk / Floor plan** switch flies up over the floor, and the **Walls** slider cuts the walls down. In the floor plan the camera is overhead, so **chat questions go without a pose**: the location is "unknown" and the model answers about the whole home, asking which room only if the question needs it.
+- **Typing:** the viewer listens for keys on the whole page, so `state.inputEnabled` is switched off while the chat box or the plan bar has focus.
+- **Seven Park scene:** streamed from superspl.at's CDN (copyrighted; never copied into the repo). The demo depends on that CDN being up.
 
 ## How a question gets its location
 

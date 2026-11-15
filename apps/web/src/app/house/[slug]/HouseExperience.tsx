@@ -3,29 +3,35 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { ViewerHandle } from "@playcanvas/supersplat-viewer/viewer";
-import { readPose } from "./camera";
+import { readPose } from "@/components/tour/camera";
+import { PlanControls, usePlanView } from "@/components/tour/PlanControls";
+import { SplatViewer } from "@/components/tour/SplatViewer";
+import type { Tour } from "@/lib/tours";
 import { Chat } from "./Chat";
-import { SplatViewer, type SceneProps } from "./SplatViewer";
 
 /**
- * The house page: a full-screen 3D tour with the title and the chat floating
- * over it. Each question carries the camera pose at the moment it's sent, so
- * the answer knows where the visitor is and what they're looking at. The chat
- * can be hidden; it stays mounted so the conversation is kept.
+ * The house page: the full-screen walk-through (with the Walk / Floor plan
+ * switch) and the chat floating over it. Each question carries the camera pose
+ * at the moment it's sent, so the answer knows where the visitor is and what
+ * they're looking at; in the floor plan the camera is overhead, so questions go
+ * without one and are answered about the whole home. The chat can be hidden;
+ * it stays mounted so the conversation is kept.
  */
 export function HouseExperience({
   houseSlug,
   houseTitle,
-  scene,
+  tour,
   sources,
 }: {
   houseSlug: string;
   houseTitle: string;
-  scene: SceneProps;
+  tour: Tour;
   sources: string[];
 }) {
   const [chatOpen, setChatOpen] = useState(true);
+  const [viewer, setViewer] = useState<ViewerHandle | null>(null);
   const viewerRef = useRef<ViewerHandle | null>(null);
+  const planView = usePlanView(viewer);
 
   // The viewer listens for WASD/arrow keys on the whole page, so typing in the
   // chat would also walk the camera. Pause its keyboard input while typing.
@@ -33,11 +39,19 @@ export function HouseExperience({
     if (viewerRef.current) viewerRef.current.state.inputEnabled = !typing;
   };
 
-  const getPose = () => (viewerRef.current?.state.loaded ? readPose(viewerRef.current) : null);
+  const getPose = () =>
+    viewerRef.current?.state.loaded && !planView.planRef.current ? readPose(viewerRef.current) : null;
 
   return (
     <div className="tour">
-      <SplatViewer scene={scene} onViewer={(v) => (viewerRef.current = v)} />
+      <SplatViewer
+        tour={tour}
+        plan={planView.plan}
+        onViewer={(v) => {
+          viewerRef.current = v;
+          setViewer(v);
+        }}
+      />
 
       <header className="tour-header">
         <Link href="/" className="tour-back">
@@ -45,6 +59,8 @@ export function HouseExperience({
         </Link>
         <h1>{houseTitle}</h1>
       </header>
+
+      {viewer && <PlanControls viewer={viewer} view={planView} />}
 
       <div className="tour-chat" hidden={!chatOpen}>
         <Chat

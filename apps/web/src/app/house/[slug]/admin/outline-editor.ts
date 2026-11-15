@@ -1,8 +1,13 @@
 import type { ViewerHandle } from '@playcanvas/supersplat-viewer/viewer';
 
-import type { PlanControls } from './plan-controls';
+/** The Walk / Floor plan switch, as the settings page needs it (backed by usePlanView). */
+type PlanSwitch = {
+    /** Open or close the floor plan, as the switch does. */
+    setPlan(on: boolean): void;
+    readonly plan: boolean;
+};
 
-// Settings-page tool for the floor plan outline: drawn on the top-down view around the home.
+// Settings-page tool for the floor plan outline (ported from the tours app): drawn on the top-down view around the home.
 // The floor plan then hides everything outside it (the backdrop the walk needs for the view out of
 // the windows, which looks broken from above) and centers on it.
 //
@@ -25,7 +30,7 @@ const SVG = 'http://www.w3.org/2000/svg';
 type OutlineEditorOptions = {
     stage: HTMLElement;
     viewer: ViewerHandle;
-    planControls: PlanControls;
+    planControls: PlanSwitch;
     /** The outline in the draft (null: none, the floor is found automatically). */
     get: () => Point[] | null;
     /** Store a new outline in the draft. */
@@ -318,7 +323,7 @@ const mountOutlineEditor = ({
     button('done').addEventListener('click', finish);
 
     // leaving the floor plan (the Walk switch) ends drawing, keeping the corners
-    viewer.events.on('planView:changed', (on: boolean) => {
+    const planChanged = viewer.events.on('planView:changed', (on: boolean) => {
         if (!on) finish();
         showTrim();
     });
@@ -395,6 +400,13 @@ const mountOutlineEditor = ({
 
     return {
         section,
+        /** Take the overlay off the stage and stop listening (the page is unmounting). */
+        destroy: () => {
+            editing = false;
+            cancelAnimationFrame(frame);
+            planChanged.off();
+            overlay.remove();
+        },
         /** Show the draft's outline again (after Revert). */
         refresh: () => {
             if (editing) {
@@ -411,3 +423,4 @@ const mountOutlineEditor = ({
 };
 
 export { mountOutlineEditor };
+export type { PlanSwitch };

@@ -68,17 +68,14 @@ export type Zone = {
   opensTo?: string[];
 };
 
-/** A 3D Gaussian-splat tour, rendered by the viewer in engine/supersplat-viewer. */
+/**
+ * A 3D Gaussian-splat tour. The tour itself (content, collision, look, walk
+ * feel, floor plan) lives in apps/web/tours/<tour>.json, edited on the
+ * dev-only settings page (/house/<slug>/admin); the house only names it.
+ */
 export type HouseScene = {
-  /** Splat content: a .sog / .ply file, or a streamed meta.json. */
-  contentUrl: string;
-  /** Viewer experience settings (camera start, background, post effects). */
-  settingsUrl: string;
-  /** Voxel collision for walk mode. */
-  collisionUrl?: string;
-  /** Anti-aliasing compensation override; match what the scene was trained with. */
-  aa?: boolean;
-  credit: string;
+  /** Tour file name in apps/web/tours, without .json. */
+  tour: string;
 };
 
 export type House = {
