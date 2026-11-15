@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useMounted } from "@/lib/useMounted";
 // Type-only: importing values from "@splat/llm" here would bundle the listing context into the client.
 import type { Pose, ResolvedLocation } from "@splat/llm/spatial";
 
@@ -165,6 +166,7 @@ export function Chat({
   showLocation?: boolean;
 }) {
   const [lastContext, setLastContext] = useState<{ pose: Pose; location: ResolvedLocation } | null>(null);
+  const mounted = useMounted();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
@@ -227,6 +229,9 @@ export function Chat({
       setPending(false);
     }
   }
+
+  // Browser-only (see useMounted): keeps autofill attributes from tripping hydration.
+  if (!mounted) return null;
 
   return (
     <aside className="chat">

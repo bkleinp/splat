@@ -15,7 +15,7 @@ import type { Box, House } from "./types";
 //   "<thing> in <room>") cast as a 3D ray through the voxels; the box sits on what it hit,
 //   with heights from the voxels. Two lines for one object = the same thing from two angles.
 // - Entrance boxes sit on the logged doorway positions.
-// Re-log with the walkthrough logger (dev server, ?log on the house page).
+// Re-log with the walkthrough logger on the settings page (dev server, /multi-story-house/admin).
 
 /** Floor height (y) of each storey. */
 const FLOOR_Y = { 1: 0, 2: 3.3, 3: 6.4 } as const;
@@ -426,6 +426,290 @@ export const multiStoryHouse: House = {
         { title: "Bathrooms", pageNumber: 2, zones: ["bedroom-1-vanity", "bedroom-1-vanity-2", "bedroom-2-vanity", "bath-3-vanity", "powder-vanity"], content: "Floating walnut vanities with quartz tops and Kohler Verticyl undermount sinks; Brizo Frank Lloyd Wright faucets in matte black; lighted mirrors." },
         { title: "Showers and toilets", pageNumber: 2, zones: ["bedroom-1-shower", "bedroom-2-shower", "bath-3-shower", "bedroom-1-toilet", "bedroom-2-toilet", "bath-3-toilet", "powder-toilet"], content: "Frameless glass showers with Brizo rain heads and hand showers; TOTO Aquia wall-hung toilets throughout." },
         { title: "Whole-home systems", pageNumber: 3, zones: [], content: "Mitsubishi three-zone ducted heat pump (one zone per floor, 2019, serviced yearly). Rheem 50-gallon hybrid water heater (2023). 6.4 kW owned rooftop solar. Whole-house water softener. Cat 6 to the office and the third floor. Smart lock on the front door." },
+      ],
+    },
+    {
+      id: "msh-measurements",
+      filename: "measurements-and-inventory.pdf",
+      title: "Measurements & inventory",
+      sourceKind: "realtor_upload",
+      sections: [
+        {
+          title: "About this inventory",
+          zones: [],
+          content:
+            "Every item you can see in the 3D tour, with its make, size, and whether it stays. The owners' furniture and decor are not included; built-ins, light fixtures, the wine cooler, the living room and patio TVs, the garage shelving, and all appliances are included.",
+        },
+        {
+          title: "Kitchen island",
+          zones: ["kitchen-island"],
+          content:
+            "Center island in rift-sawn walnut with a honed Taj Mahal quartzite top (3 cm, mitered waterfall ends), 8 ft 6 in long, 3 ft deep, and 36 in high, with a 12 in seating overhang for three stools. Included.",
+        },
+        {
+          title: "Kitchen sink",
+          zones: ["kitchen-sink"],
+          content:
+            "Kohler Strive undermount stainless sink, 32 in wide, 18 in front to back, 9.5 in deep, with a Kohler Purist pull-down faucet in matte black and a Bosch Benchmark panel-ready dishwasher (24 in) beside it. Included.",
+        },
+        {
+          title: "Cooktop and oven",
+          zones: ["kitchen-range"],
+          content:
+            "Wolf induction cooktop, 36 in wide with five zones, frameless black glass, over a Wolf M Series convection wall oven, 30 in wide and 5.1 cu ft, in black glass. Included.",
+        },
+        {
+          title: "Refrigerator",
+          zones: ["kitchen-fridge"],
+          content:
+            "Sub-Zero Designer column refrigerator, 30 in wide, 24 in deep, and 84 in tall, with walnut panels matching the cabinets and an internal ice maker. Included.",
+        },
+        {
+          title: "Kitchen tall cabinets",
+          zones: ["kitchen-cabinets"],
+          content:
+            "Pantry wall of walnut cabinets, about 5 ft wide, 18 in deep, and 8 ft tall, with Blum soft-close pull-out shelves and a 30 in coffee station behind pocket doors. Included.",
+        },
+        {
+          title: "Living room couch",
+          zones: ["living-couch"],
+          content:
+            "Restoration Hardware Cloud sofa in ivory performance linen, 94 in long, 40 in deep, seat height 18 in (not included).",
+        },
+        {
+          title: "Living room TV",
+          zones: ["living-tv"],
+          content:
+            "Samsung QLED 75-inch TV (66 in wide, 37 in tall), wall-mounted with its bottom edge 36 in above the floor, with power and HDMI run inside the wall. Included.",
+        },
+        {
+          title: "Recliner",
+          zones: ["living-recliner"],
+          content:
+            "La-Z-Boy power recliner in cognac leather, 36 in wide, 38 in deep (64 in fully reclined), with USB charging in the arm (not included).",
+        },
+        {
+          title: "Second recliner",
+          zones: ["living-recliner-2"],
+          content:
+            "Matching La-Z-Boy power recliner in cognac leather, 36 in wide and 38 in deep (not included).",
+        },
+        {
+          title: "Dining table",
+          zones: ["dining-table"],
+          content:
+            "Crate & Barrel Basque dining table in honey oak, 54 by 36 in and 30 in high, seating four (six with end chairs) (not included). The 24 in linen drum pendant above it is included.",
+        },
+        {
+          title: "Wine cooler and storage",
+          zones: ["wine-cooler"],
+          content:
+            "Sub-Zero 24 in undercounter wine storage (46 bottles, two temperature zones, 34 in high) under a walnut storage column 24 in wide and 18 in deep that runs to 7 ft. Included.",
+        },
+        {
+          title: "Outdoor TV",
+          zones: ["patio-tv"],
+          content:
+            "Samsung The Terrace 65-inch outdoor TV (57 in wide, 33 in tall), mounted above the fireplace with its bottom edge about 48 in above the floor. Included.",
+        },
+        {
+          title: "Patio fireplace",
+          zones: ["patio-fireplace"],
+          content:
+            "Napoleon outdoor gas fireplace insert, opening 42 in wide and 18 in tall, in a limestone surround 66 in wide, switched from the wall. Included.",
+        },
+        {
+          title: "Patio recliner",
+          zones: ["patio-recliner"],
+          content:
+            "Polywood outdoor recliner in slate grey with a Sunbrella cushion, 36 by 38 in (not included).",
+        },
+        {
+          title: "Patio coffee table",
+          zones: ["patio-table"],
+          content:
+            "Teak coffee table from Article, 36 by 32 in and 16 in high (not included).",
+        },
+        {
+          title: "L-shaped couch",
+          zones: ["patio-couch"],
+          content:
+            "Outer modular L-shaped outdoor sectional in charcoal OuterShell fabric, 87 by 81 in, seat height 17 in (not included).",
+        },
+        {
+          title: "Patio ceiling fan",
+          zones: ["patio-fan"],
+          content:
+            "Minka-Aire damp-rated ceiling fan, 60 in blade span, matte black, about 8 ft 6 in above the patio floor, with a remote. Included.",
+        },
+        {
+          title: "Garage storage shelves",
+          zones: ["garage-storage"],
+          content:
+            "Gladiator steel shelving along the side wall, 8 ft long, 24 in deep, and 7 ft 10 in tall, with five shelves rated 300 lb each. Included. The garage also has a ChargePoint EV charger.",
+        },
+        {
+          title: "Ground-floor bathroom sink & vanity",
+          zones: ["powder-vanity"],
+          content:
+            "Floating walnut vanity, 24 in wide and 18 in deep, with a Kohler Verticyl sink, a Brizo faucet in matte black, and a 24 by 30 in round mirror. Included.",
+        },
+        {
+          title: "Ground-floor bathroom toilet",
+          zones: ["powder-toilet"],
+          content:
+            "TOTO Aquia wall-hung dual-flush toilet in white. Included.",
+        },
+        {
+          title: "Ground-floor bedroom painting",
+          zones: ["bedroom-1-painting"],
+          content:
+            "Framed abstract painting on canvas, 48 by 30 in, in a thin oak frame (the owners' art, not included).",
+        },
+        {
+          title: "Ground-floor bedroom bed",
+          zones: ["bedroom-1-bed"],
+          content:
+            "Article Burrard queen bed in walnut (mattress 60 by 80 in, frame 64 by 86 in, headboard 38 in high) (not included).",
+        },
+        {
+          title: "Ground-floor bedroom nightstand",
+          zones: ["bedroom-1-nightstand"],
+          content:
+            "Article Burrard nightstand in walnut, 22 in wide, 16 in deep, and 26 in high (not included).",
+        },
+        {
+          title: "Ground-floor ensuite sink & vanity",
+          zones: ["bedroom-1-vanity"],
+          content:
+            "Floating walnut vanity, 30 in wide and 21 in deep, with a quartz top, a Kohler Verticyl sink, a Brizo Frank Lloyd Wright faucet in matte black, and a 24 by 36 in lighted mirror. Included.",
+        },
+        {
+          title: "Ground-floor ensuite second sink & vanity",
+          zones: ["bedroom-1-vanity-2"],
+          content:
+            "Matching floating walnut vanity, 30 in wide and 21 in deep, with its own Kohler Verticyl sink, Brizo faucet, and 24 by 36 in lighted mirror. Included.",
+        },
+        {
+          title: "Ground-floor ensuite toilet",
+          zones: ["bedroom-1-toilet"],
+          content:
+            "TOTO Aquia wall-hung dual-flush toilet in a 3 ft wide alcove. Included.",
+        },
+        {
+          title: "Ground-floor ensuite shower",
+          zones: ["bedroom-1-shower"],
+          content:
+            "Walk-in shower, 7 ft by 2 ft 6 in, with a frameless glass door 28 in wide, a Brizo 10 in rain head and handheld, and a linear drain. Included.",
+        },
+        {
+          title: "Second-floor bedroom bed",
+          zones: ["bedroom-2-bed"],
+          content:
+            "Crate & Barrel Lounge upholstered queen bed in stone linen (mattress 60 by 80 in, frame 66 by 88 in) (not included).",
+        },
+        {
+          title: "Second-floor bedroom chair",
+          zones: ["bedroom-2-chair"],
+          content:
+            "Article Sven reading chair in tan leather, 30 by 33 in (not included).",
+        },
+        {
+          title: "Second-floor bedroom nightstand",
+          zones: ["bedroom-2-nightstand"],
+          content:
+            "West Elm Mid-Century nightstand in walnut, 24 in wide, 18 in deep, and 25 in high (not included).",
+        },
+        {
+          title: "Walk-in closet",
+          zones: ["bedroom-2-closet"],
+          content:
+            "Walk-in closet, 8 ft 6 in by 5 ft 6 in with a 9 ft ceiling, fitted with a California Closets system in walnut laminate: about 14 ft of hanging rod (double-hung on one side), 10 ft of shelving, a 36 in stack of six drawers, and LED lighting. Included.",
+        },
+        {
+          title: "Second-floor ensuite double vanity",
+          zones: ["bedroom-2-vanity"],
+          content:
+            "Floating walnut double vanity, 72 in wide and 21 in deep, with a quartz top, two Kohler Verticyl sinks, Brizo faucets in matte black, and two 30 by 36 in lighted mirrors. Included.",
+        },
+        {
+          title: "Second-floor ensuite toilet",
+          zones: ["bedroom-2-toilet"],
+          content:
+            "TOTO Aquia wall-hung dual-flush toilet in a 3 ft wide alcove. Included.",
+        },
+        {
+          title: "Second-floor ensuite shower",
+          zones: ["bedroom-2-shower"],
+          content:
+            "Walk-in shower, 7 ft by 2 ft 2 in, with a frameless glass panel, a Brizo 12 in rain head and handheld, and a niche for bottles. Included.",
+        },
+        {
+          title: "Office desk",
+          zones: ["office-desk"],
+          content:
+            "Herman Miller Jesper sit-to-stand desk in walnut, 48 by 30 in, adjustable from 26 to 50 in high (not included).",
+        },
+        {
+          title: "Office bookshelf",
+          zones: ["office-bookshelf"],
+          content:
+            "Built-in walnut bookshelf on the side wall, 63 in wide, 16 in deep, and 7 ft tall, with six adjustable shelves and LED strip lighting. Included.",
+        },
+        {
+          title: "Office second bookshelf",
+          zones: ["office-bookshelf-2"],
+          content:
+            "Built-in walnut bookshelf on the back wall, 63 in wide, 16 in deep, and 7 ft tall, with closed cabinets on the bottom row. Included.",
+        },
+        {
+          title: "Office couch",
+          zones: ["office-couch"],
+          content:
+            "Joybird Eliot sleeper sofa in navy velvet, 86 in long and 36 in deep, opening to a queen bed (not included).",
+        },
+        {
+          title: "Hallway storage cabinets",
+          zones: ["hall-2-cabinets"],
+          content:
+            "Built-in white oak storage cabinets, 7 ft wide, 24 in deep, floor to 8 ft, with adjustable shelves for linens and laundry supplies. Included.",
+        },
+        {
+          title: "Third-floor couch",
+          zones: ["loft-couch"],
+          content:
+            "Burrow Range sofa in charcoal fabric, 90 in long and 37 in deep (not included).",
+        },
+        {
+          title: "Third-floor TV",
+          zones: ["loft-tv"],
+          content:
+            "LG OLED 55-inch TV (48 in wide, 28 in tall) on a low media stand, screen about 30 in above the floor (not included).",
+        },
+        {
+          title: "Third-floor workstation",
+          zones: ["loft-workstation"],
+          content:
+            "Fully Jarvis standing desk in bamboo, 50 by 30 in, with a Steelcase Leap chair (not included).",
+        },
+        {
+          title: "Third-floor bathroom sink & vanity",
+          zones: ["bath-3-vanity"],
+          content:
+            "Floating walnut vanity, 36 in wide and 18 in deep, with a quartz top, a Kohler Verticyl sink, and a 30 by 36 in lighted mirror. Included.",
+        },
+        {
+          title: "Third-floor bathroom toilet",
+          zones: ["bath-3-toilet"],
+          content:
+            "TOTO Aquia wall-hung dual-flush toilet. Included.",
+        },
+        {
+          title: "Third-floor bathroom shower",
+          zones: ["bath-3-shower"],
+          content:
+            "Shower, 42 by 30 in, with a frameless glass door and a Brizo 8 in rain head. Included.",
+        },
       ],
     },
     {

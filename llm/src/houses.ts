@@ -660,6 +660,206 @@ const house3: House = {
       ],
     },
     {
+      id: "h3-measurements",
+      filename: "measurements-and-inventory.pdf",
+      title: "Measurements & inventory",
+      sourceKind: "realtor_upload",
+      sections: [
+        {
+          title: "About this inventory",
+          zones: [],
+          content:
+            "Every item you can see in the 3D tour, with its make, size, and whether it stays. Staged furniture, TVs, and decor are not included in the sale; built-ins, fixtures, shades, and appliances are included.",
+        },
+        {
+          title: "Kitchen sink",
+          zones: ["kitchen-sink"],
+          content:
+            "Kraus Kore single-bowl undermount stainless steel workstation sink, 30 in wide, 18 in front to back, 10 in deep, with a Kohler Sous pull-down faucet in matte black and a Bosch 800 Series dishwasher (24 in wide) to its left. Included.",
+        },
+        {
+          title: "Back counter stove",
+          zones: ["kitchen-stove"],
+          content:
+            "Bosch Benchmark Series induction cooktop, 30 in wide and 21 in deep, four zones (largest 11 in across), black glass with a stainless trim, under a Zephyr 30 in recirculating hood. Included.",
+        },
+        {
+          title: "Main run stove",
+          zones: ["kitchen-stove-main"],
+          content:
+            "Miele induction cooktop, 30 in wide and 20 in deep, four zones with a bridging zone on the left, frameless black glass. Included.",
+        },
+        {
+          title: "Oven",
+          zones: ["kitchen-oven-range"],
+          content:
+            "Bosch 800 Series single wall oven, 30 in wide, 4.6 cu ft, stainless steel, set at eye level with the door at 34 in above the floor, in a tall cabinet column 32 in wide and 8 ft tall. Included.",
+        },
+        {
+          title: "Kitchen tall cabinets",
+          zones: ["kitchen-cabinets"],
+          content:
+            "Two flat-panel pantry cabinets in matte white lacquer with Blum soft-close hinges, each 18 in wide, 24 in deep, and 8 ft tall, with five pull-out shelves each. Included.",
+        },
+        {
+          title: "Back counter run",
+          zones: ["kitchen-back-counter"],
+          content:
+            "12 ft 4 in run of Caesarstone Pure White quartz (3 cm, eased edge), 36 in high and 25 in deep, with six soft-close drawers below and 13 in deep upper cabinets 18 in above the counter. Included.",
+        },
+        {
+          title: "Main counter run",
+          zones: ["kitchen-main-counter"],
+          content:
+            "12 ft 4 in run of Caesarstone Pure White quartz, 36 in high and 25 in deep, with a full-height quartz backsplash behind the cooktop and under-cabinet LED strips on a dimmer. Included.",
+        },
+        {
+          title: "Dining table",
+          zones: ["dining-table"],
+          content:
+            "West Elm Mid-Century pedestal table in walnut, 42 in round and 30 in high, with four Article Svelti dining chairs in oak (staging, not included). The ceiling junction box above is ready for a pendant.",
+        },
+        {
+          title: "Living room TV",
+          zones: ["living-tv"],
+          content:
+            "Samsung The Frame 65-inch TV (57 in wide, 33 in tall, 1 in deep), flush wall-mounted with its bottom edge 32 in above the floor (staging, not included). The wall is wired for a TV up to 75 in.",
+        },
+        {
+          title: "Living room media shelf",
+          zones: ["living-shelf"],
+          content:
+            "Built-in floating media shelf in white oak with a matte finish, 90 in long, 16 in deep, and 3 in thick, mounted 18 in above the floor, with a cable channel and two outlets behind it. Included.",
+        },
+        {
+          title: "Living room sectional",
+          zones: ["couch"],
+          content:
+            "Room & Board Metro L-shaped sectional in light grey performance fabric, 118 in by 59 in, seat height 17 in, back height 33 in (staging, not included).",
+        },
+        {
+          title: "Living room balcony door",
+          zones: ["living-balcony-door"],
+          content:
+            "PGT WinGuard impact-rated aluminum sliding glass door, 9 ft 8 in wide in two panels and 9 ft 6 in tall, with a Lutron Sivoia light-filtering motorized shade. Included.",
+        },
+        {
+          title: "Storage closet",
+          zones: ["storage-closet"],
+          content:
+            "Storage closet with a flat-panel white door, 4 ft wide, 22 in deep, and 8 ft tall, with four adjustable Elfa shelves and a 4 ft coat rod. Included.",
+        },
+        {
+          title: "Primary bed",
+          zones: ["primary-bed"],
+          content:
+            "Crate & Barrel Lowe upholstered king bed in oatmeal linen (mattress 76 by 80 in, frame 82 by 88 in, headboard 46 in high), with a Tuft & Needle king mattress (staging, not included).",
+        },
+        {
+          title: "Primary bedroom TV",
+          zones: ["primary-tv"],
+          content:
+            "LG 50-inch 4K TV (44 in wide, 25 in tall) on its pedestal stand on top of the dresser, screen about 31 in above the floor (staging, not included).",
+        },
+        {
+          title: "Primary bedroom dresser",
+          zones: ["primary-dresser"],
+          content:
+            "West Elm Mid-Century six-drawer dresser in acorn-finished wood, 48 in wide, 20 in deep, and 28 in high (staging, not included).",
+        },
+        {
+          title: "Primary nightstand",
+          zones: ["primary-nightstand"],
+          content:
+            "West Elm Mid-Century nightstand in acorn, 22 in wide, 18 in deep, and 25 in high, one each side of the bed (staging, not included).",
+        },
+        {
+          title: "Primary bedroom balcony door",
+          zones: ["primary-balcony-door"],
+          content:
+            "PGT WinGuard impact-rated sliding glass door, 11 ft 6 in wide in three panels and 9 ft 6 in tall, with a Lutron Sivoia blackout motorized shade. Included.",
+        },
+        {
+          title: "Walk-in closet",
+          zones: ["primary-closet"],
+          content:
+            "Walk-in closet, 5 ft 9 in by 9 ft 2 in with an 8 ft ceiling, fitted with a California Closets system in white oak laminate: 9 ft of double-tier hanging (18 ft of rod), 8 ft of shelving above, a 30 in stack of six drawers, and LED strip lighting. Included.",
+        },
+        {
+          title: "Primary shower",
+          zones: ["primary-shower"],
+          content:
+            "Walk-in shower, 60 by 36 in, with a frameless 3/8 in glass panel and a 30 in door, a 10 in Hansgrohe Raindance rain head, a handheld on a 36 in slide bar, and a 32 in linear drain. Included.",
+        },
+        {
+          title: "Primary toilet",
+          zones: ["primary-toilet"],
+          content:
+            "TOTO Aquia wall-hung dual-flush toilet in white on a Geberit in-wall tank, in a 32 in wide nook, seat 16 in high. Included.",
+        },
+        {
+          title: "Primary bathroom vanity",
+          zones: ["primary-vanity"],
+          content:
+            "Floating double vanity in white oak, 60 in wide, 21 in deep, top at 34 in, with a Caesarstone quartz top, two Kohler Verticyl sinks, Hansgrohe Talis E faucets in brushed nickel, and a 60 by 36 in LED-backlit mirror. Included.",
+        },
+        {
+          title: "Second bathroom shower",
+          zones: ["secondary-shower"],
+          content:
+            "Shower, 34 by 48 in, with a frameless glass door 24 in wide and a Grohe Euphoria shower system (8 in rain head and handheld). Included.",
+        },
+        {
+          title: "Second bathroom toilet",
+          zones: ["secondary-toilet"],
+          content:
+            "TOTO Aquia wall-hung dual-flush toilet on a Geberit in-wall tank. Included.",
+        },
+        {
+          title: "Second bathroom vanity",
+          zones: ["secondary-vanity"],
+          content:
+            "Floating vanity in white oak, 24 in wide and 18 in deep, with a quartz top, a Kohler undermount sink, and a Robern mirrored medicine cabinet 24 by 30 in. Included.",
+        },
+        {
+          title: "Second bedroom bed",
+          zones: ["bedroom-2-bed"],
+          content:
+            "Article Seno queen bed in walnut (mattress 60 by 80 in, frame 64 by 85 in, 29 in high with the mattress) (staging, not included).",
+        },
+        {
+          title: "Second bedroom TV",
+          zones: ["bedroom-2-tv"],
+          content:
+            "Sony Bravia 55-inch 4K TV (48 in wide, 28 in tall), wall-mounted above the dresser with its bottom edge 34 in above the floor (staging, not included).",
+        },
+        {
+          title: "Second bedroom dresser",
+          zones: ["bedroom-2-dresser"],
+          content:
+            "IKEA Hemnes low dresser in white stain, 60 in wide, 16 in deep, and 30 in high (staging, not included).",
+        },
+        {
+          title: "Second bedroom nightstand",
+          zones: ["bedroom-2-nightstand"],
+          content:
+            "Article Seno nightstand in walnut, 18 in wide, 16 in deep, and 24 in high (staging, not included).",
+        },
+        {
+          title: "Second bedroom closet",
+          zones: ["bedroom-2-closet"],
+          content:
+            "Reach-in closet, 6 ft wide, 2 ft deep, and 8 ft tall, with one 6 ft hanging rod, a shelf above it, and two 36 in mirrored sliding doors on soft-close tracks. Included.",
+        },
+        {
+          title: "Second bedroom balcony door",
+          zones: ["bedroom-2-balcony-door"],
+          content:
+            "PGT WinGuard impact-rated sliding glass door, 12 ft wide in three panels and 9 ft 6 in tall, with a Lutron Sivoia blackout motorized shade. Included.",
+        },
+      ],
+    },
+    {
       id: "h3-hoa",
       filename: "hoa-summary.pdf",
       title: "HOA documents",

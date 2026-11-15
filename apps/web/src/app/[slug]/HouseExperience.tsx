@@ -7,7 +7,6 @@ import { readPose } from "@/components/tour/camera";
 import { PlanControls, usePlanView } from "@/components/tour/PlanControls";
 import { SeatPrompt } from "@/components/tour/SeatPrompt";
 import { SplatViewer } from "@/components/tour/SplatViewer";
-import { WalkLogger } from "@/components/tour/WalkLogger";
 import type { Tour } from "@/lib/tours";
 import { Chat } from "./Chat";
 
@@ -17,14 +16,13 @@ import { Chat } from "./Chat";
  * at the moment it's sent, so the answer knows where the visitor is and what
  * they're looking at; in the floor plan the camera is overhead, so questions go
  * without one and are answered about the whole home. The chat can be hidden;
- * it stays mounted so the conversation is kept.
+ * it stays mounted so the conversation is kept. (The debug tools, the walkthrough
+ * logger and the Position / Facing readout, are only on the settings page,
+ * /<slug>/admin.)
  */
 /** How far the visitor walks (meters) before the open chat starts folding away, and after how long. */
 const WALK_AWAY_METRES = 0.3;
 const AUTO_CLOSE_MS = 2000;
-
-/** Dev-only walkthrough logger: whether to log floors, and whether to open it straight away. */
-export type LoggerSetup = { floorStarts: number[]; unmapped: boolean };
 
 export function HouseExperience({
   houseSlug,
@@ -32,7 +30,6 @@ export function HouseExperience({
   tourName,
   tour,
   sources,
-  logger = null,
 }: {
   houseSlug: string;
   houseTitle: string;
@@ -40,7 +37,6 @@ export function HouseExperience({
   tourName: string;
   tour: Tour;
   sources: string[];
-  logger?: LoggerSetup | null;
 }) {
   // The chat starts as a small bubble in the corner, so the home is the first thing a visitor sees.
   const [chatOpen, setChatOpen] = useState(false);
@@ -53,9 +49,6 @@ export function HouseExperience({
   const [viewer, setViewer] = useState<ViewerHandle | null>(null);
   const viewerRef = useRef<ViewerHandle | null>(null);
   const planView = usePlanView(viewer);
-  // ?log opens the logger on a home that's already mapped (read after mount: the page is static)
-  const [logParam, setLogParam] = useState(false);
-  useEffect(() => setLogParam(new URLSearchParams(window.location.search).has("log")), []);
 
   // The viewer listens for WASD/arrow keys on the whole page, so typing in the
   // chat would also walk the camera. Pause its keyboard input while typing.
@@ -137,16 +130,6 @@ export function HouseExperience({
       {viewer && <PlanControls viewer={viewer} view={planView} />}
       {viewer && <SeatPrompt viewer={viewer} getSeats={() => tour.seats ?? []} hidden={planView.plan || chatOpen} />}
 
-      {logger && (
-        <WalkLogger
-          viewer={viewer}
-          houseSlug={houseSlug}
-          floorStarts={logger.floorStarts}
-          defaultOpen={logger.unmapped || logParam}
-          onTyping={onTyping}
-        />
-      )}
-
       <div
         className="tour-chat"
         hidden={!chatOpen}
@@ -161,7 +144,6 @@ export function HouseExperience({
           sources={sources}
           getPose={getPose}
           onTyping={onTyping}
-          showLocation={logger !== null}
           onClose={closeChat}
           onPendingChange={onPendingChange}
         />
