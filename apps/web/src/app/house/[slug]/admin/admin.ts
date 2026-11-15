@@ -8,7 +8,7 @@ import type { Tour } from '@/lib/tours';
 import type { PlanSwitch } from './outline-editor';
 import { applyToAllTours, listTours, saveTour } from './tours-client';
 
-// Settings panel for /tours/<tour>/admin (ported from the tours app): every change previews live
+// Settings panel for /house/<slug>/admin (ported from the tours app): every change previews live
 // in the viewer beside it; Save writes apps/web/tours/<tour>.json, and "Apply to all tours" copies the walk + look settings to every
 // tour file (start position and background stay per tour).
 

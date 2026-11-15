@@ -398,9 +398,9 @@ a { color: inherit; }
   .scene-hint { display: none; }
 }
 
-/* ---------- Dev tools: tour list and settings page (/tours, /tours/<tour>/admin) ---------- */
+/* ---------- Dev tools: tour list and settings page (/tours, /house/<slug>/admin) ---------- */
 /* Ported from the former tours app (its style.css: "admin panel" and "floor plan outline editor").
-   The panel's markup comes from tours/[tour]/admin/admin.ts and outline-editor.ts, so its
+   The panel's markup comes from house/[slug]/admin/admin.ts and outline-editor.ts, so its
    generic class names (.row, .hint, .buttons...) are scoped under .admin-panel. */
 
 .tour-list { list-style: none; padding: 0; margin: 24px 0 0; }

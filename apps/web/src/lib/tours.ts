@@ -7,7 +7,7 @@ import type { ExperienceSettings, WalkSettings } from "@playcanvas/supersplat-vi
  * One tour: a splat scan plus how it should look and feel. Stored as
  * apps/web/tours/<name>.json, committed to git so a saved tweak is a
  * reviewable diff, and edited on the dev-only settings page
- * (/tours/<name>/admin).
+ * (/house/<slug>/admin).
  */
 export type Tour = {
   title: string;
