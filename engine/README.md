@@ -38,7 +38,7 @@ engine/scripts/fetch-sample.sh
 
 Then open **http://localhost:3000/apartment** or **/seven-park** (stock viewer in our walk-only
 mode, no buttons) or **/apartment-hosted** (stock viewer, unchanged, for comparison). Samples land
-in `public/`, which is gitignored. The product tours themselves run in the web app (`web/`).
+in `public/`, which is gitignored. The product tours themselves run in the web app (`apps/web`).
 
 ### Our changes to the viewer
 

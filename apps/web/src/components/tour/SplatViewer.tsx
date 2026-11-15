@@ -6,20 +6,23 @@ import "@playcanvas/supersplat-viewer/viewer.css";
 import type { Tour } from "@/lib/tours";
 
 /**
- * The walk-through, set up the way the tours app does it (web/src/viewer.ts):
- * the viewer fork in walk-only mode with the tour's walk feel and floor plan
- * settings, built-in UI off. onViewer hands the live handle to the parent
- * (null on teardown) for the floor plan controls and the chat.
+ * The walk-through: the viewer fork (engine/supersplat-viewer) in walk-only
+ * mode with the tour's walk feel and floor plan settings, built-in UI off.
+ * onViewer hands the live handle to the parent (null on teardown) for the
+ * floor plan controls, the chat and the settings panel; stageRef is the
+ * element the viewer fills, for overlays (the outline editor draws on it).
  */
 export function SplatViewer({
   tour,
   plan,
   onViewer,
+  stageRef,
 }: {
   tour: Tour;
   /** Whether the floor plan is showing (changes the hint). */
   plan: boolean;
   onViewer?: (viewer: ViewerHandle | null) => void;
+  stageRef?: React.Ref<HTMLElement>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
@@ -77,7 +80,7 @@ export function SplatViewer({
   }, [tour]);
 
   return (
-    <section className="scene" aria-label="3D tour">
+    <section className="scene" aria-label="3D tour" ref={stageRef}>
       <div ref={containerRef} className="scene-canvas" />
 
       {!loaded && !error && (

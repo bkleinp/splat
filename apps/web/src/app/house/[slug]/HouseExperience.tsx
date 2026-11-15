@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { ViewerHandle } from "@playcanvas/supersplat-viewer/viewer";
+import { readPose } from "@/components/tour/camera";
+import { PlanControls, usePlanView } from "@/components/tour/PlanControls";
+import { SplatViewer } from "@/components/tour/SplatViewer";
 import type { Tour } from "@/lib/tours";
-import { readPose } from "./camera";
 import { Chat } from "./Chat";
-import { PlanControls } from "./PlanControls";
-import { SplatViewer } from "./SplatViewer";
 
 /**
  * The house page: the full-screen walk-through (with the Walk / Floor plan
@@ -30,9 +30,8 @@ export function HouseExperience({
 }) {
   const [chatOpen, setChatOpen] = useState(true);
   const [viewer, setViewer] = useState<ViewerHandle | null>(null);
-  const [plan, setPlan] = useState(false);
   const viewerRef = useRef<ViewerHandle | null>(null);
-  const planRef = useRef(false);
+  const planView = usePlanView(viewer);
 
   // The viewer listens for WASD/arrow keys on the whole page, so typing in the
   // chat would also walk the camera. Pause its keyboard input while typing.
@@ -41,20 +40,16 @@ export function HouseExperience({
   };
 
   const getPose = () =>
-    viewerRef.current?.state.loaded && !planRef.current ? readPose(viewerRef.current) : null;
+    viewerRef.current?.state.loaded && !planView.planRef.current ? readPose(viewerRef.current) : null;
 
   return (
     <div className="tour">
       <SplatViewer
         tour={tour}
-        plan={plan}
+        plan={planView.plan}
         onViewer={(v) => {
           viewerRef.current = v;
           setViewer(v);
-          if (!v) {
-            planRef.current = false;
-            setPlan(false);
-          }
         }}
       />
 
@@ -65,16 +60,7 @@ export function HouseExperience({
         <h1>{houseTitle}</h1>
       </header>
 
-      {viewer && (
-        <PlanControls
-          viewer={viewer}
-          plan={plan}
-          onPlanChange={(on) => {
-            planRef.current = on;
-            setPlan(on);
-          }}
-        />
-      )}
+      {viewer && <PlanControls viewer={viewer} view={planView} />}
 
       <div className="tour-chat" hidden={!chatOpen}>
         <Chat

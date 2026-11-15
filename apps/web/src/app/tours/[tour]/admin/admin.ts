@@ -3,12 +3,13 @@ import { DEFAULT_PLAN_CLEANUP, DEFAULT_WALK_SETTINGS } from '@playcanvas/supersp
 import type { ViewerHandle, WalkSettings } from '@playcanvas/supersplat-viewer/viewer';
 
 import { mountOutlineEditor } from './outline-editor';
-import type { PlanControls } from './plan-controls';
-import { applyToAllTours, listTours, saveTour } from './tours';
-import type { Tour } from './tours';
+import type { Tour } from '@/lib/tours';
 
-// Settings panel for /<tour>/admin: every change previews live in the viewer beside it; Save
-// writes web/tours/<tour>.json, and "Apply to all tours" copies the walk + look settings to every
+import type { PlanSwitch } from './outline-editor';
+import { applyToAllTours, listTours, saveTour } from './tours-client';
+
+// Settings panel for /tours/<tour>/admin (ported from the tours app): every change previews live
+// in the viewer beside it; Save writes apps/web/tours/<tour>.json, and "Apply to all tours" copies the walk + look settings to every
 // tour file (start position and background stay per tour).
 
 type Slider = { label: string; unit: string; min: number; max: number; step: number; hint?: string };
@@ -81,7 +82,9 @@ const mountAdmin = (
     tour: Tour,
     viewer: ViewerHandle,
     stage: HTMLElement,
-    planControls: PlanControls
+    planControls: PlanSwitch,
+    /** The customer page showing this tour, for the "Open tour" link; null if no home uses it. */
+    openHref: string | null
 ) => {
     // fill settings a tour file predates with their defaults, so opening it doesn't count as a change
     const normalize = (t: Tour): Tour => {
@@ -221,7 +224,7 @@ const mountAdmin = (
             await saveTour(name, draft);
             saved = clone(draft);
             updateDirty();
-            say(`Saved to web/tours/${name}.json`);
+            say(`Saved to apps/web/tours/${name}.json`);
         } catch (err) {
             say(`Save failed: ${(err as Error).message}`, true);
         }
@@ -275,7 +278,7 @@ const mountAdmin = (
             {},
             el('p', { className: 'eyebrow' }, 'Tour settings'),
             el('h1', {}, tour.title),
-            el('a', { href: `/${name}`, target: '_blank' }, 'Open tour ↗')
+            ...(openHref ? [el('a', { href: openHref, target: '_blank' }, 'Open tour ↗')] : [])
         ),
         walkSection,
         lookSection,
@@ -307,9 +310,18 @@ const mountAdmin = (
     applyAll();
     say('Changes preview live. Save writes the tour file.');
 
-    window.addEventListener('beforeunload', (event) => {
+    const warnUnsaved = (event: BeforeUnloadEvent) => {
         if (isDirty()) event.preventDefault();
-    });
+    };
+    window.addEventListener('beforeunload', warnUnsaved);
+
+    /** Unmount: empty the panel and take the overlay off the stage. */
+    return () => {
+        window.removeEventListener('beforeunload', warnUnsaved);
+        outlineEditor.destroy();
+        panel.replaceChildren();
+        panel.classList.remove('collapsed');
+    };
 };
 
 export { mountAdmin };

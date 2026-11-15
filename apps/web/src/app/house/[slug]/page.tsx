@@ -9,7 +9,7 @@ export function generateStaticParams() {
 
 // The house context (facts, documents, zones) stays server-side: it's only sent
 // to the model, never rendered or passed to the client. Visitors get the 3D
-// walk-through (the tour file from web/tours) and the chat.
+// walk-through (the tour file from apps/web/tours) and the chat.
 export default async function HousePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const house = getHouse(slug);

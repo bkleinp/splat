@@ -4,14 +4,25 @@
     {
       "name": "viewer",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "develop", "--prefix", "engine/supersplat-viewer"],
+      "runtimeArgs": [
+        "run",
+        "develop",
+        "--prefix",
+        "engine/supersplat-viewer"
+      ],
       "port": 3000
     },
     {
-      "name": "tours",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "web"],
-      "port": 5173
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@splat/web",
+        "dev",
+        "-p",
+        "3001"
+      ],
+      "port": 3001
     }
   ]
 }
