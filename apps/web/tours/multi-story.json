@@ -1,0 +1,81 @@
+{
+  "title": "Multi-story house",
+  "credit": "2508 Paramount House, from superspl.at. Streamed; not for redistribution.",
+  "content": "https://d28zzqy0iyovbz.cloudfront.net/91c1e47e/v1/meta.json",
+  "collision": "https://d28zzqy0iyovbz.cloudfront.net/91c1e47e/v1/scene.voxel.json",
+  "aa": false,
+  "viewer": {
+    "version": 2,
+    "tonemapping": "linear",
+    "highPrecisionRendering": true,
+    "background": {
+      "color": [
+        0.9647058823529412,
+        0.9647058823529412,
+        0.9647058823529412
+      ]
+    },
+    "postEffectSettings": {
+      "sharpness": {
+        "enabled": true,
+        "amount": 0.7
+      },
+      "bloom": {
+        "enabled": true,
+        "intensity": 0.04,
+        "blurLevel": 6
+      },
+      "grading": {
+        "enabled": false,
+        "brightness": 1,
+        "contrast": 1,
+        "saturation": 1,
+        "tint": [
+          1,
+          1,
+          1
+        ]
+      },
+      "vignette": {
+        "enabled": false,
+        "intensity": 0.28,
+        "inner": 0,
+        "outer": 1.48,
+        "curvature": 0.31
+      },
+      "fringing": {
+        "enabled": true,
+        "intensity": 5
+      }
+    },
+    "animTracks": [],
+    "cameras": [
+      {
+        "initial": {
+          "position": [
+            -2.332430839538574,
+            1.4913558959960938,
+            -4.476056098937988
+          ],
+          "target": [
+            -0.37910088007691134,
+            1.1549004072497528,
+            -4.743075691849411
+          ],
+          "fov": 98
+        }
+      }
+    ],
+    "annotations": [],
+    "startMode": "default"
+  },
+  "walk": {
+    "speed": 1.4,
+    "responseTime": 0.25,
+    "headBob": 1,
+    "stepLength": 0.7,
+    "eyeHeight": 1.5,
+    "fov": 90,
+    "jumpHeight": 0.8
+  }
+}

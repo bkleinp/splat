@@ -3,7 +3,8 @@ import type { Box, House, Vec3, Zone, ZoneKind } from "./types";
 // Spatial resolution service (blueprint § "Spatial Resolution Service").
 // The geometry is deterministic app logic; deciding what "this" means is not.
 // This module measures, for the camera pose sent with a question:
-//   where you are   = the room (or doorway) containing the camera's x/z position
+//   where you are   = the room (or doorway) containing the camera's position:
+//                     its x/z on the floor plan, and its height for the storey
 //   how you look    = the camera's tilt
 //   line of sight   = every object box the 3D view ray passes through, in order
 //   around you      = objects nearby, with distance and direction
@@ -50,14 +51,23 @@ const UNKNOWN: ResolvedLocation = { ancestorZones: [], rayHits: [], nearbyObject
 const ref = (zone: Zone): ZoneRef => ({ id: zone.id, name: zone.name, kind: zone.kind });
 const isRoom = (z: Zone) => z.kind === "room" || z.kind === "outdoor_area";
 
-/** Room and doorway boxes are matched on the floor plan: where you stand, not how tall you are. */
-const containsXZ = (b: Box, [x, , z]: Vec3) => x >= b.min[0] && x <= b.max[0] && z >= b.min[2] && z <= b.max[2];
+/**
+ * Room and doorway boxes are matched on the floor plan (where you stand), and
+ * on height only to tell storeys apart: a room box spans its storey's whole
+ * camera-height range (one-storey homes use one range for everything).
+ */
+const contains = (b: Box, [x, y, z]: Vec3) =>
+  x >= b.min[0] && x <= b.max[0] && z >= b.min[2] && z <= b.max[2] && y >= b.min[1] && y <= b.max[1];
+
+/** The camera is at this box's storey (its height range). */
+const onStorey = (b: Box, [, y]: Vec3) => y >= b.min[1] && y <= b.max[1];
 
 /** Floor area (x/z) of a box. */
 const footprint = (b: Box) => (b.max[0] - b.min[0]) * (b.max[2] - b.min[2]);
 
-/** Horizontal gap between two boxes' footprints (0 if they touch or overlap). */
+/** Horizontal gap between two boxes' footprints (0 if they touch or overlap); Infinity on different storeys. */
 function boxGap(a: Box, b: Box): number {
+  if (a.min[1] >= b.max[1] || b.min[1] >= a.max[1]) return Infinity;
   const dx = Math.max(a.min[0] - b.max[0], 0, b.min[0] - a.max[0]);
   const dz = Math.max(a.min[2] - b.max[2], 0, b.min[2] - a.max[2]);
   return Math.hypot(dx, dz);
@@ -144,16 +154,18 @@ function ancestorsOf(zone: Zone, byId: Map<string, Zone>): ZoneRef[] {
 
 const smallestContaining = (zones: Zone[], position: Vec3) =>
   zones
-    .flatMap((zone) => (zone.boxes ?? []).filter((b) => containsXZ(b, position)).map((box) => ({ zone, box })))
+    .flatMap((zone) => (zone.boxes ?? []).filter((b) => contains(b, position)).map((box) => ({ zone, box })))
     .sort((a, b) => footprint(a.box) - footprint(b.box))[0]?.zone;
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
 /**
  * Measure a camera pose against the house's zones.
- * 1. Where you are, from x/z: the entrance whose doorway box you're in, else
- *    the smallest room box containing you, else the nearest room within
- *    NEAR_ROOM_METRES ("near"), else "unknown" (never guess further).
+ * 1. Where you are, from x/z (and height, for the storey): the entrance whose
+ *    doorway box you're in, else the smallest room box containing you, else
+ *    the nearest room on your storey within NEAR_ROOM_METRES ("near"), else
+ *    the storey itself (a floor zone with a box, for multi-storey homes whose
+ *    rooms aren't mapped there yet), else "unknown" (never guess further).
  * 2. Line of sight: every object box (in rooms visible from where you stand:
  *    your room, its open-plan neighbours via opensTo, and from a doorway the
  *    rooms on both sides) that the 3D view ray passes through within
@@ -174,15 +186,28 @@ export function resolvePose(house: House, pose: Pose | undefined): ResolvedLocat
   let confidence = 0.9;
   if (!room) {
     const nearest = rooms
-      .map((zone) => ({ zone, d: Math.min(...zone.boxes!.map((b) => distanceToBox(b, position))) }))
+      .map((zone) => ({ zone, d: Math.min(Infinity, ...zone.boxes!.filter((b) => onStorey(b, position)).map((b) => distanceToBox(b, position))) }))
       .filter((r) => r.d <= NEAR_ROOM_METRES)
       .sort((a, b) => a.d - b.d)[0];
-    if (!nearest) return UNKNOWN;
-    room = nearest.zone;
-    resolution = "near-zone";
-    confidence = 0.5;
+    if (nearest) {
+      room = nearest.zone;
+      resolution = "near-zone";
+      confidence = 0.5;
+    }
+  }
+  if (!room) {
+    // Somewhere on a storey with no mapped room here (a landing, the stairs, an unmapped room):
+    // say which floor, and nothing finer.
+    const floor = smallestContaining(house.zones.filter((z) => z.kind === "floor"), position);
+    if (!floor) return UNKNOWN;
+    return { ...UNKNOWN, primaryZone: ref(floor), ancestorZones: ancestorsOf(floor, byId), confidence: 0.6, resolution: "inside-zone" };
   }
   const entrance = smallestContaining(house.zones.filter((z) => z.kind === "entrance"), position);
+  if (entrance && resolution === "near-zone") {
+    // Standing in a doorway box is a definite place, even where it pokes past the room boxes.
+    resolution = "inside-zone";
+    confidence = 0.9;
+  }
   const primary = entrance ?? room;
   const ancestorZones = ancestorsOf(primary, byId);
 
