@@ -195,13 +195,8 @@ const house3: House = {
     { id: "bedroom-2-closet", name: "Closet", kind: "feature", parentId: "bedroom-2", aliases: ["wardrobe"], target: [obj(-5.2, -3.4, 0.75, 1.2, 0, 2.4)] },
     { id: "bedroom-2-balcony-door", name: "Balcony door", kind: "feature", parentId: "bedroom-2", aliases: ["windows", "balcony"], target: [obj(-5.4, -1.7, 3.8, 4.05, 0, 2.6)] },
   ],
-  scene: {
-    contentUrl: "https://d28zzqy0iyovbz.cloudfront.net/b185fd52/v1/meta.json",
-    settingsUrl: "/scenes/seven-park/settings.json",
-    collisionUrl: "https://d28zzqy0iyovbz.cloudfront.net/b185fd52/v1/scene.voxel.json",
-    aa: false,
-    credit: "3D scan: “Seven Park – Miami – Unit” by sa3d, © stepinc.co, streamed from superspl.at",
-  },
+  // The walk-through: web/tours/seven-park.json (content, collision, look, walk feel, floor plan).
+  scene: { tour: "seven-park" },
   facts: [
     { key: "listing_price", label: "List price", displayValue: "$865,000", source: "Listing basics form" },
     { key: "property_type", label: "Property type", displayValue: "Condominium, 12th floor", source: "Listing basics form" },

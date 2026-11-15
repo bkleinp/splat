@@ -15,7 +15,8 @@
     "next": "15",
     "playcanvas": "2.24.1",
     "react": "19",
-    "react-dom": "19"
+    "react-dom": "19",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "22",

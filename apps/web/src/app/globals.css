@@ -118,8 +118,8 @@ a { color: inherit; }
 .scene-progress div { height: 100%; background: var(--accent); transition: width 0.2s; }
 .scene-error { color: #fca5a5; padding: 24px; text-align: center; }
 
-/* Glass pill shared by the title, controls and hint. */
-.tour-header, .scene-controls, .scene-hint, .tour-chat-open {
+/* Glass pill shared by the title, hint and chat button. */
+.tour-header, .scene-hint, .tour-chat-open {
   background: var(--overlay);
   color: var(--overlay-text);
   backdrop-filter: blur(10px);
@@ -153,19 +153,110 @@ a { color: inherit; }
 .scene-bottom > * { pointer-events: auto; }
 .tour:has(.tour-chat[hidden]) .scene-bottom { right: 16px; }
 
-.scene-controls { display: flex; gap: 4px; padding: 4px; border-radius: 999px; }
-.scene-controls button {
-  border: none;
+/* Walk / Floor plan switch and Walls slider, top centre. Ported from the tours
+   app (web/src/style.css, "top bar: walk / floor plan"): keep the two in step. */
+.plan-bar {
+  --glass-line: rgba(255, 255, 255, 0.14);
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 32px);
+  padding: 5px;
   border-radius: 999px;
-  padding: 5px 12px;
-  background: transparent;
-  color: inherit;
+  background: var(--overlay);
+  border: 1px solid var(--glass-line);
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-size: 14px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.view-switch { position: relative; display: grid; grid-template-columns: 1fr 1fr; flex: none; }
+.view-switch button {
+  position: relative;
+  z-index: 1;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: rgba(255, 255, 255, 0.72);
   font: inherit;
-  font-size: 0.82rem;
   font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.view-switch button[aria-pressed="true"] { color: #111; }
+.view-switch button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* the sliding pill behind the selected view */
+.view-switch .thumb {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 50%;
+  border-radius: 999px;
+  background: #fff;
+  transition: transform 0.28s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.plan-bar.is-plan .view-switch .thumb { transform: translateX(100%); }
+
+.cut {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 0 8px;
+  border-left: 1px solid var(--glass-line);
+  margin-left: 2px;
+}
+.cut-label { color: rgba(255, 255, 255, 0.72); }
+.cut-value { min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.cut input[type="range"] {
+  --fill: 50%;
+  width: 160px;
+  height: 36px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
 }
-.scene-controls button:hover { background: rgba(250, 250, 249, 0.15); }
+.cut input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, #fff var(--fill), rgba(255, 255, 255, 0.25) var(--fill));
+}
+.cut input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, #fff var(--fill), rgba(255, 255, 255, 0.25) var(--fill));
+}
+.cut input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.cut input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.cut input[type="range"]:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { .view-switch .thumb { transition: none; } }
 
 .scene-hint { padding: 6px 12px; border-radius: 999px; font-size: 0.78rem; }
 .scene-credit {
@@ -284,10 +375,21 @@ a { color: inherit; }
 
 /* ---------- Phones: chat becomes a bottom sheet ---------- */
 
+/* Narrower screens: centred, the bar (with its slider open) would run into the
+   title, so it sits under the title instead. */
+@media (max-width: 1100px) {
+  .plan-bar { top: 104px; left: 16px; transform: none; }
+}
+
 @media (max-width: 700px) {
   :root { --sheet-height: 52dvh; }
 
   .tour-header { right: 16px; max-width: none; }
+
+  /* phones: the slider drops under the switch (as in the tours app) */
+  .plan-bar { flex-direction: column; align-items: stretch; border-radius: 22px; }
+  .cut { border-left: 0; border-top: 1px solid var(--glass-line); margin: 0; padding: 2px 8px 0; }
+  .cut input[type="range"] { flex: 1; width: auto; }
 
   .tour-chat { left: 8px; right: 8px; bottom: 8px; width: auto; height: var(--sheet-height); }
 
