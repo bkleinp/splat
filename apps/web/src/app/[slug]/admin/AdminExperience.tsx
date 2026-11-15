@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { ViewerHandle } from "@playcanvas/supersplat-viewer/viewer";
 import { PlanControls, usePlanView } from "@/components/tour/PlanControls";
+import { SeatPrompt } from "@/components/tour/SeatPrompt";
 import { SplatViewer } from "@/components/tour/SplatViewer";
+import type { Seat } from "@/lib/seats";
 import type { Tour } from "@/lib/tours";
 import type { PlanSwitch } from "./outline-editor";
 
@@ -23,6 +25,9 @@ export function AdminExperience({ name, tour, openHref }: { name: string; tour: 
   const planViewRef = useRef(planView);
   planViewRef.current = planView;
 
+  // The draft's seats, kept current by the panel, so "Press F to sit" uses edits right away.
+  const seatsRef = useRef<Seat[]>(tour.seats ?? []);
+
   useEffect(() => {
     const stage = stageRef.current;
     const panel = panelRef.current;
@@ -38,7 +43,17 @@ export function AdminExperience({ name, tour, openHref }: { name: string; tour: 
     let unmount: (() => void) | undefined;
     let cancelled = false;
     import("./admin").then(({ mountAdmin }) => {
-      if (!cancelled) unmount = mountAdmin(panel, name, tour, viewer, stage, planSwitch, openHref);
+      if (cancelled) return;
+      try {
+        unmount = mountAdmin(panel, name, tour, viewer, stage, planSwitch, openHref, (seats) => {
+          seatsRef.current = seats;
+        });
+      } catch (err) {
+        // The viewer can be torn down (React's dev double-mount, a hot reload) before this effect's
+        // cleanup runs; the next viewer mounts its own panel, so only report other failures.
+        if (!(err instanceof Error && /destroyed/.test(err.message))) throw err;
+        panel.replaceChildren();
+      }
     });
     return () => {
       cancelled = true;
@@ -49,8 +64,16 @@ export function AdminExperience({ name, tour, openHref }: { name: string; tour: 
   return (
     <div className="admin-layout">
       <div className="admin-stage">
-        <SplatViewer tour={tour} plan={planView.plan} onViewer={setViewer} stageRef={stageRef} />
+        <SplatViewer
+          name={name}
+          tour={tour}
+          plan={planView.plan}
+          onViewer={setViewer}
+          stageRef={stageRef}
+          loadHiddenSkybox
+        />
         {viewer && <PlanControls viewer={viewer} view={planView} />}
+        {viewer && <SeatPrompt viewer={viewer} getSeats={() => seatsRef.current} hidden={planView.plan} />}
       </div>
       <aside className="admin-panel" ref={panelRef} aria-label="Tour settings" />
     </div>

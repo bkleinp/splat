@@ -71,7 +71,7 @@ export type Zone = {
 /**
  * A 3D Gaussian-splat tour. The tour itself (content, collision, look, walk
  * feel, floor plan) lives in apps/web/tours/<tour>.json, edited on the
- * dev-only settings page (/house/<slug>/admin); the house only names it.
+ * dev-only settings page (/<slug>/admin); the house only names it.
  */
 export type HouseScene = {
   /** Tour file name in apps/web/tours, without .json. */

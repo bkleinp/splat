@@ -4,7 +4,7 @@ import { getHouse } from "@splat/llm";
 import { loadTour, toursEditable } from "@/lib/tours";
 import { AdminExperience } from "./AdminExperience";
 
-// The home's tour settings (/house/<slug>/admin): the walk-through with a panel that previews walk,
+// The home's tour settings (/<slug>/admin): the walk-through with a panel that previews walk,
 // look and floor plan changes live and saves them to apps/web/tours/<tour>.json. Dev server only:
 // it writes files, so a production build 404s it.
 export const dynamic = "force-dynamic";
@@ -19,5 +19,5 @@ export default async function HouseAdminPage({ params }: { params: Promise<{ slu
   const tour = name ? await loadTour(name) : null;
   if (!house || !name || !tour) notFound();
 
-  return <AdminExperience key={name} name={name} tour={tour} openHref={`/house/${house.slug}`} />;
+  return <AdminExperience key={name} name={name} tour={tour} openHref={`/${house.slug}`} />;
 }

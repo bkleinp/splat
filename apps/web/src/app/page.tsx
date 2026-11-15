@@ -8,7 +8,7 @@ export default function HomePage() {
       <p className="muted">Walk through each home in 3D and ask our assistant anything along the way.</p>
       <div className="house-grid">
         {houses.map((house) => (
-          <Link key={house.id} href={`/house/${house.slug}`} className="house-card">
+          <Link key={house.id} href={`/${house.slug}`} className="house-card">
             {house.scene && <span className="eyebrow">3D tour</span>}
             <h2>{house.title}</h2>
             <p className="muted">

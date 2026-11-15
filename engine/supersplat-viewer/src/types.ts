@@ -289,6 +289,28 @@ type ViewerHandle = {
      */
     setPlanCleanup(cleanup: Partial<PlanCleanup>): void;
     /**
+     * Tour fork: show or hide the skybox (`skyboxUrl`), the view out of the windows. Hidden, the
+     * settings' background colour shows instead. Shown by default. Available before loading.
+     */
+    setSkyboxVisible(visible: boolean): void;
+    /**
+     * Tour fork: sit at a seat: glide from where the walker stands to the seated eye `position`
+     * ([x, y, z], world space), facing `yaw` (degrees, the camera's heading convention: 0 looks
+     * down -z, 90 down -x). Looking around still works; any movement stands the walker back up
+     * where they were. Fires `seated:changed` with (true, position, yaw). Returns false when the camera isn't walking
+     * (e.g. in the plan view). Requires `state.loaded`.
+     */
+    sitAt(seat: { position: [number, number, number]; yaw: number }): boolean;
+    /** Tour fork: stand up from a seat, back where the walker stood. Fires `seated:changed` (false). */
+    standUp(): void;
+    /** Tour fork: whether the walker is sitting. */
+    isSeated(): boolean;
+    /**
+     * Tour fork: where a world point shows on the screen, in CSS pixels from the canvas's top left;
+     * null when it is behind the camera. Requires `state.loaded`.
+     */
+    worldToScreen(x: number, y: number, z: number): [number, number] | null;
+    /**
      * Tour fork: where a point on the screen (CSS pixels from the canvas's top left) lands on the
      * floor, as [x, z] in world space; null when it misses. The floor is the plan view's, or the
      * one under the walker. Requires `state.loaded`.

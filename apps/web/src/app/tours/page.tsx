@@ -35,8 +35,8 @@ export default async function ToursPage() {
                 </span>
               </span>
               <span className="tour-list-links">
-                {house && <Link href={`/house/${house.slug}`}>Open</Link>}
-                {house && <Link href={`/house/${house.slug}/admin`}>Settings</Link>}
+                {house && <Link href={`/${house.slug}`}>Open</Link>}
+                {house && <Link href={`/${house.slug}/admin`}>Settings</Link>}
               </span>
             </li>
           );

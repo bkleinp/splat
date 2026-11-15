@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ViewerHandle } from "@playcanvas/supersplat-viewer/viewer";
 import "@playcanvas/supersplat-viewer/viewer.css";
+import { skyboxSrc } from "@/lib/skybox";
 import type { Tour } from "@/lib/tours";
 
 /**
@@ -13,12 +14,21 @@ import type { Tour } from "@/lib/tours";
  * element the viewer fills, for overlays (the outline editor draws on it).
  */
 export function SplatViewer({
+  name,
   tour,
   plan,
   onViewer,
   stageRef,
+  loadHiddenSkybox = false,
 }: {
+  /** The tour's file name (tours/<name>.json), for its skybox url. */
+  name: string;
   tour: Tour;
+  /**
+   * Load the skybox even when the tour has it switched off (hidden), so it can be switched on live:
+   * the settings page. Otherwise a hidden skybox isn't downloaded at all.
+   */
+  loadHiddenSkybox?: boolean;
   /** Whether the floor plan is showing (changes the hint). */
   plan: boolean;
   onViewer?: (viewer: ViewerHandle | null) => void;
@@ -43,11 +53,13 @@ export function SplatViewer({
       // The viewer touches window/WebGL at import time, so load it client-side only.
       const { createViewer } = await import("@playcanvas/supersplat-viewer/viewer");
       if (cancelled) return;
+      const showSkybox = tour.showSkybox !== false;
       const v = await createViewer({
         container,
         settings: structuredClone(tour.viewer),
         contentUrl: tour.content,
         collisionUrl: tour.collision ?? undefined,
+        skyboxUrl: showSkybox || loadHiddenSkybox ? skyboxSrc(name, tour) : undefined,
         aa: tour.aa,
         ui: false,
         walkOnly: true,
@@ -57,6 +69,7 @@ export function SplatViewer({
         v.destroy();
         return;
       }
+      v.setSkyboxVisible(showSkybox);
       v.setPlanOutline(tour.plan?.outline ?? null);
       v.setPlanBottom(tour.plan?.bottom ?? null);
       if (tour.plan?.cleanup) v.setPlanCleanup(tour.plan.cleanup);
@@ -77,7 +90,7 @@ export function SplatViewer({
       created?.destroy();
       onViewerRef.current?.(null);
     };
-  }, [tour]);
+  }, [name, tour, loadHiddenSkybox]);
 
   return (
     <section className="scene" aria-label="3D tour" ref={stageRef}>
@@ -97,8 +110,8 @@ export function SplatViewer({
         <div className="scene-bottom">
           <span className="scene-hint">
             {plan
-              ? "Drag to tilt and turn · scroll or pinch to zoom"
-              : "Click a spot to walk there · drag to look · WASD to move"}
+              ? "Drag to turn · Scroll to zoom"
+              : "Click to walk · Drag to look · WASD to move"}
           </span>
           {tour.credit && <span className="scene-credit">{tour.credit}</span>}
         </div>

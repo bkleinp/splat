@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import type { ViewerHandle } from "@playcanvas/supersplat-viewer/viewer";
 import { readPose } from "@/components/tour/camera";
 import { PlanControls, usePlanView } from "@/components/tour/PlanControls";
+import { SeatPrompt } from "@/components/tour/SeatPrompt";
 import { SplatViewer } from "@/components/tour/SplatViewer";
 import type { Tour } from "@/lib/tours";
 import { Chat } from "./Chat";
@@ -20,11 +21,14 @@ import { Chat } from "./Chat";
 export function HouseExperience({
   houseSlug,
   houseTitle,
+  tourName,
   tour,
   sources,
 }: {
   houseSlug: string;
   houseTitle: string;
+  /** The tour's file name (tours/<name>.json). */
+  tourName: string;
   tour: Tour;
   sources: string[];
 }) {
@@ -45,6 +49,7 @@ export function HouseExperience({
   return (
     <div className="tour">
       <SplatViewer
+        name={tourName}
         tour={tour}
         plan={planView.plan}
         onViewer={(v) => {
@@ -61,6 +66,7 @@ export function HouseExperience({
       </header>
 
       {viewer && <PlanControls viewer={viewer} view={planView} />}
+      {viewer && <SeatPrompt viewer={viewer} getSeats={() => tour.seats ?? []} hidden={planView.plan} />}
 
       <div className="tour-chat" hidden={!chatOpen}>
         <Chat

@@ -1,6 +1,6 @@
 {
   "title": "Apartment (sample)",
-  "credit": "SA3D_R&D_XP47 by Stephane Agullo (sa3d.fr). Author lists CC BY-NC 4.0: internal testing only.",
+  "credit": "Scan by Stephane Agullo (sa3d.fr) · CC BY-NC 4.0",
   "content": "/samples/apartment/apartment.sog",
   "collision": "/samples/apartment/apartment.voxel.json",
   "viewer": {

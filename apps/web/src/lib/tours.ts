@@ -2,12 +2,13 @@ import "server-only";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { ExperienceSettings, WalkSettings } from "@playcanvas/supersplat-viewer/viewer";
+import type { Seat } from "./seats";
 
 /**
  * One tour: a splat scan plus how it should look and feel. Stored as
  * apps/web/tours/<name>.json, committed to git so a saved tweak is a
  * reviewable diff, and edited on the dev-only settings page
- * (/house/<slug>/admin).
+ * (/<slug>/admin).
  */
 export type Tour = {
   title: string;
@@ -19,6 +20,17 @@ export type Tour = {
   collision?: string | null;
   /** Anti-aliasing compensation override; unset follows the file. */
   aa?: boolean;
+  /**
+   * Skybox: an equirectangular image of the surroundings, the view out of the windows (e.g.
+   * superspl.at's `https://superspl.at/s/skybox?id=<scene>`). Images from other sites are passed
+   * through /api/tours/<name>/skybox, since browsers won't put a cross-site image without CORS
+   * headers into WebGL.
+   */
+  skybox?: string | null;
+  /** Show the skybox (default true); off shows the plain background colour instead. */
+  showSkybox?: boolean;
+  /** Places to sit (chairs, couches): walk up to one and press F. Edited on the settings page. */
+  seats?: Seat[];
   /** Viewer experience settings: start camera, background, tonemapping, post effects. */
   viewer: ExperienceSettings;
   /** Walking feel. */

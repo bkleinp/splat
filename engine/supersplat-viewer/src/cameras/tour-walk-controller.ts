@@ -3,7 +3,7 @@ import { math, Vec3 } from 'playcanvas';
 import type { WalkSettings } from '../options';
 
 import type { Camera, CameraFrame } from './camera';
-import { setYawBasis } from './camera-utils';
+import { applyFrameRotation, dampAngles, setYawBasis } from './camera-utils';
 import { WalkController } from './walk-controller';
 
 // Home-tour walking, layered on WalkController without changing its physics: a human pace with
@@ -34,6 +34,9 @@ const DEFAULT_WALK_SETTINGS: Readonly<WalkSettings> = Object.freeze({
     jumpHeight: 0.8
 });
 
+/** How far a seated walker can look up or down, degrees. */
+const SEATED_PITCH_LIMIT = 80;
+
 /** Vertical speed, m/s, above which the walker counts as airborne (jumping or falling). */
 const AIRBORNE_SPEED = 1;
 
@@ -61,6 +64,14 @@ class TourWalkController extends WalkController {
     private _levelTime = LANDED_TIME;
 
     private _reducedMotion = false;
+
+    private _seated = false;
+
+    private _seatPosition = new Vec3();
+
+    private _seatAngles = new Vec3();
+
+    private _seatTarget = new Vec3();
 
     constructor() {
         super();
@@ -124,7 +135,55 @@ class TourWalkController extends WalkController {
         this._resetBob();
     }
 
+    /** Sitting: the walker is parked at a seat, can look around, and doesn't walk. */
+    get seated(): boolean {
+        return this._seated;
+    }
+
+    /** Set while seated when movement input arrives: the camera manager stands the walker up. */
+    standRequested = false;
+
+    /**
+     * Sit at a seat: hold the eye at `position`, facing `yaw` (degrees) and looking down by
+     * `pitch`. Looking around still works; walking doesn't (it asks to stand instead).
+     *
+     * @param position - Seated eye position in world space.
+     * @param yaw - Facing direction, degrees.
+     * @param pitch - Look angle, degrees (negative looks down).
+     */
+    sit(position: Vec3, yaw: number, pitch: number) {
+        this._seated = true;
+        this.standRequested = false;
+        this._seatPosition.copy(position);
+        this._seatTarget.set(pitch, yaw, 0);
+        this._seatAngles.copy(this._seatTarget);
+        this._resetBob();
+    }
+
+    /**
+     * Stand up at `camera`'s pose (where the walker stood before sitting), walking again from there.
+     *
+     * @param camera - The pose to stand at.
+     */
+    stand(camera: Camera) {
+        this._seated = false;
+        this.standRequested = false;
+        this.goto(camera);
+    }
+
     update(deltaTime: number, inputFrame: CameraFrame, camera: Camera): void {
+        if (this._seated) {
+            const { move, rotate } = inputFrame.read();
+            if (move[0] !== 0 || move[1] !== 0 || move[2] !== 0) this.standRequested = true;
+            applyFrameRotation(this._seatTarget, rotate, -SEATED_PITCH_LIMIT, SEATED_PITCH_LIMIT);
+            dampAngles(this._seatAngles, this._seatTarget, this.rotateDamping, deltaTime);
+            camera.position.copy(this._seatPosition);
+            camera.angles.set(this._seatAngles.x, this._seatAngles.y, 0);
+            camera.distance = 1;
+            camera.fov = this.fov;
+            return;
+        }
+
         // jump height 0 turns jumping off: drop the jump signal before the walk physics sees it
         if (this._settings.jumpHeight <= 0) {
             const move = inputFrame.deltas.move.read();

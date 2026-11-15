@@ -1085,6 +1085,47 @@ class Viewer {
         return hit ? hit.y : position.y - this.walkSettings.eyeHeight;
     }
 
+    // tour fork: sitting at seats
+    sitAt(seat: { position: [number, number, number]; yaw: number }): boolean {
+        this.requireLoaded('sitAt');
+        const [x, y, z] = seat.position;
+        if (![x, y, z, seat.yaw].every(Number.isFinite)) {
+            throw new Error('sitAt: position and yaw must be finite numbers');
+        }
+        if (this.planView) return false;
+        return this.cameraManager.sit(new Vec3(x, y, z), seat.yaw);
+    }
+
+    standUp(): void {
+        this.requireLoaded('standUp');
+        this.cameraManager.stand();
+    }
+
+    isSeated(): boolean {
+        return !!this.cameraManager?.isSeated();
+    }
+
+    worldToScreen(x: number, y: number, z: number): [number, number] | null {
+        this.requireLoaded('worldToScreen');
+        const entity = this.global.camera;
+        const point = new Vec3(x, y, z);
+        // behind the camera has no place on the screen
+        if (point.clone().sub(entity.getPosition()).dot(entity.forward) <= 0) return null;
+        const screen = entity.camera!.worldToScreen(point, new Vec3());
+        return [screen.x, screen.y];
+    }
+
+    // tour fork: show or hide the skybox (the view out of the windows); hidden shows the
+    // settings' background colour
+    private skyboxVisible = true;
+
+    setSkyboxVisible(visible: boolean): void {
+        this.requireAlive('setSkyboxVisible');
+        this.skyboxVisible = !!visible;
+        this.configureCamera(this.global.settings);
+        this.global.app.renderNextFrame = true;
+    }
+
     // tour fork: change sharpness, color grading, vignette etc. live
     setPostEffects(postEffects: PostEffectSettings): void {
         this.requireAlive('setPostEffects');
@@ -1412,9 +1453,10 @@ class Viewer {
             camera.camera.clearColor = state.xrMode === 'ar' ? new Color(0, 0, 0, 0) : new Color(background.color);
         }
 
-        // the sky would cover AR's passthrough view entirely, so it is hidden for the session
+        // the sky would cover AR's passthrough view entirely, so it is hidden for the session; the
+        // tour fork can also hide it (setSkyboxVisible), showing the background colour instead
         const skyLayer = app.scene.layers.getLayerById(LAYERID_SKYBOX);
-        if (skyLayer) skyLayer.enabled = state.xrMode !== 'ar';
+        if (skyLayer) skyLayer.enabled = state.xrMode !== 'ar' && this.skyboxVisible;
 
         // Mesh overlay bakes its vertex colors based on the current gamma
         // path; reapply when CameraFrame is created/destroyed (e.g. on XR

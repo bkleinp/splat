@@ -39,7 +39,7 @@ const obj = (x0: number, x1: number, z0: number, z1: number, y0: number, y1: num
 // Corner 2 give a ready-made area(...) call).
 const house3: House = {
   id: "house-3",
-  slug: "house-3",
+  slug: "singlefloor",
   title: "Miami Park View Residence",
   address: "700 Park View Drive, Unit 1204",
   city: "Miami",

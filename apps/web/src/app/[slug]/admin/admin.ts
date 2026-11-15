@@ -3,12 +3,14 @@ import { DEFAULT_PLAN_CLEANUP, DEFAULT_WALK_SETTINGS } from '@playcanvas/supersp
 import type { ViewerHandle, WalkSettings } from '@playcanvas/supersplat-viewer/viewer';
 
 import { mountOutlineEditor } from './outline-editor';
+import { mountSeatEditor } from './seat-editor';
+import type { Seat } from '@/lib/seats';
 import type { Tour } from '@/lib/tours';
 
 import type { PlanSwitch } from './outline-editor';
 import { applyToAllTours, listTours, saveTour } from './tours-client';
 
-// Settings panel for /house/<slug>/admin (ported from the tours app): every change previews live
+// Settings panel for /<slug>/admin (ported from the tours app): every change previews live
 // in the viewer beside it; Save writes apps/web/tours/<tour>.json, and "Apply to all tours" copies the walk + look settings to every
 // tour file (start position and background stay per tour).
 
@@ -84,8 +86,13 @@ const mountAdmin = (
     stage: HTMLElement,
     planControls: PlanSwitch,
     /** The customer page showing this tour, for the "Open tour" link; null if no home uses it. */
-    openHref: string | null
+    openHref: string | null,
+    /** Told whenever the draft's seats change, so the page's "Press F to sit" uses them live. */
+    onSeatsChange?: (seats: Seat[]) => void
 ) => {
+    // fail fast, before attaching anything, if the viewer was already torn down (it throws then)
+    viewer.setWalkSettings({});
+
     // fill settings a tour file predates with their defaults, so opening it doesn't count as a change
     const normalize = (t: Tour): Tour => {
         const n = clone(t);
@@ -120,6 +127,8 @@ const mountAdmin = (
         viewer.setPlanOutline(draft.plan?.outline ?? null);
         viewer.setPlanBottom(draft.plan?.bottom ?? null);
         viewer.setPlanCleanup({ ...DEFAULT_PLAN_CLEANUP, ...draft.plan?.cleanup });
+        viewer.setSkyboxVisible(draft.showSkybox !== false);
+        onSeatsChange?.(draft.seats ?? []);
         refreshers.forEach((refresh) => refresh());
         updateDirty();
     };
@@ -147,6 +156,20 @@ const mountAdmin = (
     });
     refreshers.push(outlineEditor.refresh);
 
+    // --- seats (per tour)
+    const seatEditor = mountSeatEditor({
+        stage,
+        viewer,
+        get: () => draft.seats ?? [],
+        set: (seats) => {
+            if (seats.length > 0) draft.seats = seats;
+            else delete draft.seats;
+            onSeatsChange?.(seats);
+            updateDirty();
+        }
+    });
+    refreshers.push(seatEditor.refresh);
+
     // --- walking
     const walkSection = el('section', {}, el('h2', {}, 'Walking'));
     for (const key of Object.keys(WALK_SLIDERS) as (keyof WalkSettings)[]) {
@@ -161,6 +184,35 @@ const mountAdmin = (
         );
         refreshers.push(refresh);
         walkSection.append(row);
+    }
+
+    // --- outside view: the skybox (an image of the surroundings) or the plain background colour
+    const outsideSection = el('section', {}, el('h2', {}, 'Outside view'));
+    if (draft.skybox) {
+        const toggle = toggleRow(
+            'Show the view out of the windows',
+            () => draft.showSkybox !== false,
+            (on) => {
+                // on is the default, so the file only records "off"
+                if (on) delete draft.showSkybox;
+                else draft.showSkybox = false;
+                viewer.setSkyboxVisible(on);
+                updateDirty();
+            }
+        );
+        refreshers.push(toggle.refresh);
+        outsideSection.append(
+            toggle.row,
+            el('p', { className: 'hint' }, 'Off shows the plain background colour in the windows instead.')
+        );
+    } else {
+        outsideSection.append(
+            el(
+                'p',
+                { className: 'hint' },
+                `This tour has no outside view. Add a "skybox" image link to apps/web/tours/${name}.json to get one.`
+            )
+        );
     }
 
     // --- look
@@ -281,7 +333,9 @@ const mountAdmin = (
             ...(openHref ? [el('a', { href: openHref, target: '_blank' }, 'Open tour ↗')] : [])
         ),
         walkSection,
+        outsideSection,
         lookSection,
+        seatEditor.section,
         outlineEditor.section,
         el(
             'footer',
@@ -319,6 +373,7 @@ const mountAdmin = (
     return () => {
         window.removeEventListener('beforeunload', warnUnsaved);
         outlineEditor.destroy();
+        seatEditor.destroy();
         panel.replaceChildren();
         panel.classList.remove('collapsed');
     };

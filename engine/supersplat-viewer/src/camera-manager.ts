@@ -61,6 +61,10 @@ const PLAN_DURATION = 1.6;
 const ORBIT_PITCH_RANGE = new Vec2(-90, 90);
 const PLAN_PITCH_RANGE = new Vec2(-90, -10);
 
+// Sitting: seconds to glide into or out of a seat, and the seated gaze, degrees (a little down).
+const SIT_DURATION = 1.1;
+const SEATED_PITCH = -8;
+
 // The plan view frames the floor the walker is on, found by casting a grid of rays down through
 // the collision: hits this close to the floor's height count as that floor (a step down to a
 // terrace still does; the storey below does not).
@@ -163,6 +167,14 @@ class CameraManager {
 
     // Tour fork: the floor plan around the floor at `floorY`.
     findFootprint: (floorY: number) => Footprint;
+
+    // Tour fork: sit at a seat (eye position, facing yaw in degrees), gliding there from where the
+    // walker stands; false when the camera isn't walking. Moving, or stand(), stands back up.
+    sit: (position: Vec3, yaw: number) => boolean;
+
+    stand: () => void;
+
+    isSeated: () => boolean;
 
     // Tour fork: in the plan view, fly to frame a new footprint (the plan's outline changed).
     reframePlan: (floorY: number, footprint: Footprint) => void;
@@ -371,6 +383,31 @@ class CameraManager {
             if (planActive) flyToPlan(floorY, footprint);
         };
 
+        // sitting (tour fork): where the walker stood before sitting, to stand back up at
+        const standPose = new Camera();
+
+        this.sit = (position: Vec3, yaw: number) => {
+            if (state.cameraMode !== 'walk' || planActive) return false;
+            if (!controllers.walk.seated) standPose.copy(this.camera);
+            controllers.walk.sit(position, yaw, SEATED_PITCH);
+            startTransition(SIT_DURATION, planEase, planTurnEase);
+            global.app.renderNextFrame = true;
+            events.fire('seated:changed', true, [position.x, position.y, position.z], yaw);
+            return true;
+        };
+
+        this.stand = () => {
+            if (!controllers.walk.seated) return;
+            // stand where the walker was, looking the way they look now (level)
+            standPose.angles.set(0, this.camera.angles.y, 0);
+            controllers.walk.stand(standPose);
+            startTransition(SIT_DURATION, planEase, planTurnEase);
+            global.app.renderNextFrame = true;
+            events.fire('seated:changed', false);
+        };
+
+        this.isSeated = () => controllers.walk.seated;
+
         this.setPlanView = (on: boolean, floorY: number, footprint: Footprint) => {
             if (on === planActive) return;
             const ease = planEase;
@@ -422,6 +459,9 @@ class CameraManager {
             sourcesByMode[state.cameraMode]?.update(dt, this.camera, frame);
 
             controller.update(dt, frame, target);
+
+            // a seated walker who tries to walk stands up first
+            if (controllers.walk.standRequested && state.cameraMode === 'walk') this.stand();
 
             if (transitionTimer < 1) {
                 // lerp away from previous camera during transition
@@ -659,6 +699,11 @@ class CameraManager {
 
         // tap-to-navigate: start auto-driving the active mode toward a picked position
         events.on('navigateTo', (position: Vec3, normal: Vec3, speedMul = 1) => {
+            // seated (tour fork): a click to walk somewhere stands up first; click again to go
+            if (controllers.walk.seated) {
+                this.stand();
+                return;
+            }
             const source = sourcesByMode[state.cameraMode];
             if (source) {
                 source.navigateTo(position, speedMul);

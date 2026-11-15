@@ -19,10 +19,22 @@ setup; `apps/web` links to the viewer's built `dist/`.
 **Tours.** A house in `llm/src/houses.ts` names its tour (`scene: { tour: "seven-park" }`); the
 walk-through is built from `apps/web/tours/seven-park.json` (content, collision, look, walk feel,
 floor plan). On the dev server, http://localhost:3000/tours lists the tours and links each one's
-settings page (`/house/<slug>/admin`, e.g. `/house/house-3/admin`), which previews changes live and saves them to the JSON file
+settings page (`/<slug>/admin`, e.g. `/singlefloor/admin`; the home itself is at `/singlefloor`), which previews changes live and saves them to the JSON file
 (commit it to keep them). The settings pages and their API are dev-only: a production build 404s them.
 The `apartment` tour reads its scan from `engine/supersplat-viewer/public/samples`
 (`engine/scripts/fetch-sample.sh`).
+
+**Seats.** Visitors who walk up to a seat see **F · Sit** (a button on touch screens); F glides
+them into it, they can look around, and F (or walking, or clicking somewhere) stands them back up
+where they were. Seats are per tour (`seats` in the tour file) and edited in the settings page's
+**Seats** section: stand in front of a chair or couch, face it, **Add seat in front of me**, then
+rename it, nudge it (arrows move 10 cm, ⟲ ⟳ turn 15°, ▲ ▼ raise or lower the eye 5 cm), try it with
+**Sit**, or **Move here** / **Delete**. Seats also show as markers in the settings page's view;
+click one to try it. Save writes them to the tour file.
+
+**Outside view.** A tour can have a `skybox` (an image of the surroundings, seen through the
+windows); the settings page's **Outside view** checkbox switches it off for the plain background
+(`showSkybox: false`). Images from other sites go through `/api/tours/<name>/skybox`.
 
 ## Setup (Windows)
 

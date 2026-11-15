@@ -1,8 +1,9 @@
 {
   "title": "Seven Park unit",
-  "credit": "Seven Park, Miami, by sa3d, (c) stepinc.co. Streamed from superspl.at; not for redistribution.",
+  "credit": "Seven Park, Miami · Scan by sa3d · © stepinc.co",
   "content": "https://d28zzqy0iyovbz.cloudfront.net/b185fd52/v1/meta.json",
   "collision": "https://d28zzqy0iyovbz.cloudfront.net/b185fd52/v1/scene.voxel.json",
+  "skybox": "https://superspl.at/s/skybox?id=b185fd52",
   "aa": false,
   "viewer": {
     "version": 2,
@@ -77,5 +78,17 @@
     "eyeHeight": 1.5,
     "fov": 90,
     "jumpHeight": 0.8
-  }
+  },
+  "seats": [
+    {
+      "id": "seat-qqan1c",
+      "name": "Couch",
+      "position": [
+        -1.045,
+        1.15,
+        1.728
+      ],
+      "yaw": -19.966
+    }
+  ]
 }

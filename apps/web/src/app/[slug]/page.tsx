@@ -21,6 +21,7 @@ export default async function HousePage({ params }: { params: Promise<{ slug: st
       key={house.slug}
       houseSlug={house.slug}
       houseTitle={house.title}
+      tourName={house.scene!.tour}
       tour={tour}
       sources={sourceLabels(house)}
     />
